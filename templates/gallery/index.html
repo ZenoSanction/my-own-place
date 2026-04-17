@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Gallery</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --border: #30363d;
+    --text: #c9d1d9; --text2: #8b949e; --blue: #58a6ff;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+  /* Header */
+  header {
+    padding: 3rem 1.5rem 2rem; text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: radial-gradient(ellipse at 50% -20%, #1f6feb1a 0%, transparent 70%);
+  }
+  header h1 {
+    font-size: 2.5rem; font-weight: 800;
+    background: linear-gradient(135deg, #58a6ff, #bf91f3);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  header p { color: var(--text2); margin-top: .5rem; }
+
+  /* Filter bar */
+  .filter-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: .5rem; padding: 1.25rem 1.5rem; flex-wrap: wrap;
+  }
+  .filter-btn {
+    padding: .4rem .9rem; border-radius: 99px;
+    background: none; border: 1px solid var(--border);
+    color: var(--text2); cursor: pointer; font-size: .85rem;
+    transition: .2s;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--blue); border-color: var(--blue); color: #fff;
+  }
+
+  /* Gallery grid */
+  .gallery {
+    columns: 3 280px; gap: 12px;
+    padding: 1rem 1.5rem 3rem; max-width: 1400px; margin: auto;
+  }
+  .gallery-item {
+    break-inside: avoid; margin-bottom: 12px;
+    border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border); cursor: pointer;
+    transition: .2s; position: relative;
+  }
+  .gallery-item:hover { transform: scale(1.02); border-color: var(--blue); box-shadow: 0 4px 20px #58a6ff33; }
+  .gallery-item img { width: 100%; display: block; }
+  .gallery-item .placeholder {
+    width: 100%; aspect-ratio: 4/3;
+    background: linear-gradient(135deg, var(--bg2) 0%, #1c2130 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3rem; color: var(--border);
+  }
+  .gallery-item .caption {
+    padding: .6rem .75rem;
+    font-size: .8rem; color: var(--text2);
+    background: var(--bg2);
+  }
+  .gallery-item .overlay {
+    position: absolute; inset: 0;
+    background: #00000088;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: .2s;
+    font-size: 2rem;
+  }
+  .gallery-item:hover .overlay { opacity: 1; }
+
+  /* Lightbox */
+  .lightbox {
+    display: none; position: fixed; inset: 0;
+    background: #000000ee; z-index: 1000;
+    align-items: center; justify-content: center;
+    flex-direction: column; padding: 1rem;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 80vh; border-radius: 8px; object-fit: contain; }
+  .lb-caption { color: var(--text2); margin-top: .75rem; font-size: .9rem; }
+  .lb-close {
+    position: fixed; top: 1rem; right: 1rem;
+    background: var(--bg2); border: 1px solid var(--border);
+    color: var(--text); font-size: 1.2rem; width: 40px; height: 40px;
+    border-radius: 50%; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+  }
+  .lb-nav {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    background: var(--bg2); border: 1px solid var(--border);
+    color: var(--text); font-size: 1.4rem; width: 48px; height: 48px;
+    border-radius: 50%; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; transition: .2s;
+  }
+  .lb-nav:hover { background: var(--border); }
+  .lb-prev { left: 1rem; }
+  .lb-next { right: 1rem; }
+
+  footer { text-align: center; padding: 2rem; color: var(--text2); font-size: .8rem; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📸 My Gallery</h1>
+  <p>A collection of my favourite photos and images</p>
+</header>
+
+<div class="filter-bar">
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn" data-filter="photos">Photos</button>
+  <button class="filter-btn" data-filter="screenshots">Screenshots</button>
+  <button class="filter-btn" data-filter="art">Art</button>
+</div>
+
+<div class="gallery" id="gallery">
+  <!-- Add your own images here. Replace the placeholders below with real <img> tags. -->
+  <!-- Example: <div class="gallery-item" data-category="photos"><img src="myphoto.jpg"><div class="caption">My caption</div></div> -->
+
+  <div class="gallery-item" data-category="photos">
+    <div class="placeholder">🌄</div>
+    <div class="caption">Landscape photo — replace with your image</div>
+    <div class="overlay">🔍</div>
+  </div>
+  <div class="gallery-item" data-category="screenshots">
+    <div class="placeholder">🎮</div>
+    <div class="caption">Screenshot — replace with your image</div>
+    <div class="overlay">🔍</div>
+  </div>
+  <div class="gallery-item" data-category="art">
+    <div class="placeholder">🎨</div>
+    <div class="caption">Artwork — replace with your image</div>
+    <div class="overlay">🔍</div>
+  </div>
+  <div class="gallery-item" data-category="photos">
+    <div class="placeholder">🌅</div>
+    <div class="caption">Sunset — replace with your image</div>
+    <div class="overlay">🔍</div>
+  </div>
+  <div class="gallery-item" data-category="screenshots">
+    <div class="placeholder">🖥</div>
+    <div class="caption">Desktop screenshot</div>
+    <div class="overlay">🔍</div>
+  </div>
+  <div class="gallery-item" data-category="art">
+    <div class="placeholder">✏️</div>
+    <div class="caption">Drawing — add yours here</div>
+    <div class="overlay">🔍</div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+  <button class="lb-nav lb-prev" onclick="lbNav(-1)">‹</button>
+  <img id="lb-img" src="" alt="">
+  <div class="lb-caption" id="lb-caption"></div>
+  <button class="lb-nav lb-next" onclick="lbNav(1)">›</button>
+</div>
+
+<footer>My Own Place Gallery — running from my personal server</footer>
+
+<script>
+  // Filter
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const f = btn.dataset.filter;
+      document.querySelectorAll('.gallery-item').forEach(item => {
+        item.style.display = (f === 'all' || item.dataset.category === f) ? '' : 'none';
+      });
+    });
+  });
+
+  // Lightbox
+  let items = [], lbIdx = 0;
+  document.querySelectorAll('.gallery-item').forEach((item, i) => {
+    item.addEventListener('click', () => openLightbox(i));
+    items.push({ src: item.querySelector('img')?.src || '', caption: item.querySelector('.caption')?.textContent || '' });
+  });
+
+  function openLightbox (idx) {
+    lbIdx = idx;
+    const lb = document.getElementById('lightbox');
+    lb.classList.add('open');
+    showLbItem();
+  }
+  function closeLightbox () { document.getElementById('lightbox').classList.remove('open'); }
+  function lbNav (dir) { lbIdx = (lbIdx + dir + items.length) % items.length; showLbItem(); }
+  function showLbItem () {
+    const img = document.getElementById('lb-img');
+    const cap = document.getElementById('lb-caption');
+    if (items[lbIdx].src) { img.src = items[lbIdx].src; img.style.display = ''; }
+    else img.style.display = 'none';
+    cap.textContent = items[lbIdx].caption;
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft')  lbNav(-1);
+    if (e.key === 'ArrowRight') lbNav(1);
+  });
+</script>
+</body>
+</html>

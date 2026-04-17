@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SURVIVOR PROFILE // CHERNARUS NETWORK</title>
+  <style>
+    /* ─── RESET & BASE ─────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg:        #080b07;
+      --green:     #6dab4a;
+      --green-dim: #3a5a2a;
+      --green-glow:#6dab4a33;
+      --amber:     #c8a84b;
+      --amber-dim: #7a6020;
+      --danger:    #a83232;
+      --text:      #b0c49a;
+      --card-bg:   #0d130a;
+      --font:      'Courier New', Courier, monospace;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* ─── SCANLINE OVERLAY ─────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0, 0, 0, 0.03) 3px,
+        rgba(0, 0, 0, 0.03) 4px
+      );
+    }
+
+    /* ─── NOISE GRAIN ──────────────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: -50%;
+      width: 200%;
+      height: 200%;
+      pointer-events: none;
+      z-index: 9998;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      animation: grain 0.4s steps(1) infinite;
+    }
+
+    @keyframes grain {
+      0%   { transform: translate(0,   0);   }
+      10%  { transform: translate(-2%, -3%); }
+      20%  { transform: translate(3%,  2%);  }
+      30%  { transform: translate(-1%, 4%);  }
+      40%  { transform: translate(4%,  -1%); }
+      50%  { transform: translate(-3%, 3%);  }
+      60%  { transform: translate(2%,  -4%); }
+      70%  { transform: translate(-4%, 1%);  }
+      80%  { transform: translate(1%,  -2%); }
+      90%  { transform: translate(-2%, 4%);  }
+      100% { transform: translate(3%,  -3%); }
+    }
+
+    /* ─── ANIMATIONS ───────────────────────────────────────────── */
+    @keyframes blink {
+      0%, 49%  { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    @keyframes flicker {
+      0%   { opacity: 1; }
+      2%   { opacity: 0.85; }
+      4%   { opacity: 1; }
+      60%  { opacity: 1; }
+      62%  { opacity: 0.9; }
+      63%  { opacity: 1; }
+      80%  { opacity: 1; }
+      82%  { opacity: 0.88; }
+      84%  { opacity: 1; }
+      100% { opacity: 1; }
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 8px var(--green-glow); }
+      50%      { box-shadow: 0 0 18px #6dab4a55; }
+    }
+
+    @keyframes scanswipe {
+      0%   { top: -10%; }
+      100% { top: 110%; }
+    }
+
+    /* ─── TOP BAR ──────────────────────────────────────────────── */
+    #topbar {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 18px;
+      border-bottom: 1px dashed var(--green-dim);
+      background: #060905;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 8px;
+    }
+
+    .tb-net {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: var(--amber);
+      text-transform: uppercase;
+      font-variant: small-caps;
+      white-space: nowrap;
+    }
+
+    .tb-signal {
+      font-size: 12px;
+      color: var(--green);
+      letter-spacing: 0.08em;
+      text-align: center;
+      flex: 1;
+      white-space: nowrap;
+    }
+
+    .tb-signal .dot {
+      display: inline-block;
+      animation: blink 1.1s step-end infinite;
+      color: var(--green);
+    }
+
+    #clock {
+      font-size: 11px;
+      color: var(--text);
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      text-align: right;
+      min-width: 160px;
+    }
+
+    /* ─── PAGE WRAPPER ─────────────────────────────────────────── */
+    #page {
+      max-width: 520px;
+      margin: 40px auto 60px;
+      padding: 0 16px;
+      position: relative;
+    }
+
+    /* ─── SURVIVOR ID CARD ─────────────────────────────────────── */
+    .id-card {
+      position: relative;
+      border: 1px dashed var(--green-dim);
+      background: var(--card-bg);
+      padding: 28px 24px 24px;
+      margin-bottom: 32px;
+      animation: pulse-glow 4s ease-in-out infinite;
+    }
+
+    /* Corner decorations */
+    .id-card .corner {
+      position: absolute;
+      font-size: 10px;
+      color: var(--amber);
+      line-height: 1;
+      letter-spacing: 0;
+      font-family: var(--font);
+    }
+    .id-card .corner.tl { top: 6px;  left: 6px; }
+    .id-card .corner.tr { top: 6px;  right: 6px; transform: scaleX(-1); }
+    .id-card .corner.bl { bottom: 6px; left: 6px;  transform: scaleY(-1); }
+    .id-card .corner.br { bottom: 6px; right: 6px;  transform: scale(-1); }
+
+    /* Scan swipe line */
+    .id-card::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(to right, transparent, #6dab4a22, transparent);
+      animation: scanswipe 6s linear infinite;
+      pointer-events: none;
+    }
+
+    .id-card-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Avatar */
+    .avatar {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, #1e3318, #080b07);
+      border: 2px solid var(--green-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 38px;
+      box-shadow: 0 0 16px #6dab4a44, inset 0 0 12px rgba(0,0,0,0.6);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    /* ID label */
+    .id-label {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: var(--amber);
+      text-transform: uppercase;
+      margin-bottom: -6px;
+    }
+
+    /* Survivor name */
+    .survivor-name {
+      font-size: 26px;
+      font-weight: bold;
+      color: var(--green);
+      letter-spacing: 0.05em;
+      text-shadow: 0 0 10px #6dab4a88, 0 0 28px #6dab4a44;
+      animation: flicker 7s ease-in-out infinite;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    /* Status badge */
+    .status-alive {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--green);
+      letter-spacing: 0.14em;
+      border: 1px solid var(--green-dim);
+      padding: 3px 10px;
+      background: #0a1a07;
+    }
+
+    .status-alive .alive-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      display: inline-block;
+      animation: blink 1.4s step-end infinite;
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    /* Stat pills row */
+    .stat-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .stat-pill {
+      font-size: 11px;
+      color: var(--text);
+      background: #0a1308;
+      border: 1px solid var(--green-dim);
+      padding: 4px 12px;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    /* ─── SECTION LABEL ────────────────────────────────────────── */
+    .section-label {
+      text-align: center;
+      color: var(--amber);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      opacity: 0.85;
+    }
+
+    /* ─── LINKS LIST ───────────────────────────────────────────── */
+    .links-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 40px;
+    }
+
+    .link-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 14px;
+      background: var(--card-bg);
+      border: 1px dashed var(--green-dim);
+      border-left: 3px solid transparent;
+      text-decoration: none;
+      color: var(--text);
+      transition:
+        border-color 0.18s,
+        border-left-color 0.18s,
+        background 0.18s,
+        box-shadow 0.18s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .link-item:hover {
+      background: #101a0c;
+      border-color: var(--green);
+      border-left-color: var(--green);
+      box-shadow: 0 0 12px var(--green-glow);
+      color: var(--green);
+    }
+
+    .link-item:hover .link-connect {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .link-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .link-freq {
+      font-size: 10px;
+      color: var(--amber);
+      letter-spacing: 0.1em;
+      min-width: 68px;
+      flex-shrink: 0;
+    }
+
+    .link-icon {
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .link-name {
+      font-size: 13px;
+      letter-spacing: 0.07em;
+    }
+
+    .link-connect {
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: 0.12em;
+      opacity: 0;
+      transform: translateX(6px);
+      transition: opacity 0.18s, transform 0.18s;
+      white-space: nowrap;
+    }
+
+    /* ─── FOOTER ───────────────────────────────────────────────── */
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--amber-dim);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      border-top: 1px dashed var(--green-dim);
+      padding-top: 18px;
+      opacity: 0.7;
+    }
+
+    /* ─── CURSOR BLINK ─────────────────────────────────────────── */
+    .cursor {
+      display: inline-block;
+      width: 7px;
+      height: 12px;
+      background: var(--green);
+      margin-left: 3px;
+      vertical-align: middle;
+      animation: blink 0.85s step-end infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header id="topbar">
+    <span class="tb-net">[Chernarus Network]</span>
+    <span class="tb-signal">
+      <span class="dot">●</span>&nbsp;SIGNAL ACQUIRED
+    </span>
+    <span id="clock">DAY 247 // 00:00:00</span>
+  </header>
+
+  <!-- MAIN PAGE -->
+  <main id="page">
+
+    <!-- SURVIVOR ID CARD -->
+    <section class="id-card">
+      <span class="corner tl">┌──</span>
+      <span class="corner tr">┌──</span>
+      <span class="corner bl">└──</span>
+      <span class="corner br">└──</span>
+
+      <div class="id-card-inner">
+        <div class="avatar">☠</div>
+
+        <span class="id-label">Survivor ID:</span>
+
+        <!-- ✏️ Replace with your name -->
+        <h1 class="survivor-name">Your Name</h1>
+
+        <span class="status-alive">
+          <span class="alive-dot"></span>
+          ALIVE<span class="cursor"></span>
+        </span>
+
+        <div class="stat-row">
+          <!-- ✏️ Replace location/day as desired -->
+          <span class="stat-pill">📍 CHERNARUS</span>
+          <span class="stat-pill">🕐 DAY 247</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION HEADING -->
+    <p class="section-label">── Incoming Transmissions ──</p>
+
+    <!-- LINKS -->
+    <nav class="links-list">
+
+      <!-- ✏️ Replace href with your real URL -->
+      <a class="link-item" href="https://discord.com/" target="_blank" rel="noopener">
+        <span class="link-left">
+          <span class="link-freq">[FREQ-01]</span>
+          <span class="link-icon">🎮</span>
+          <span class="link-name">Discord</span>
+        </span>
+        <span class="link-connect">→ CONNECT</span>
+      </a>
+
+      <!-- ✏️ Replace href with your real URL -->
+      <a class="link-item" href="https://store.steampowered.com/" target="_blank" rel="noopener">
+        <span class="link-left">
+          <span class="link-freq">[FREQ-02]</span>
+          <span class="link-icon">🕹️</span>
+          <span class="link-name">Steam</span>
+        </span>
+        <span class="link-connect">→ CONNECT</span>
+      </a>
+
+      <!-- ✏️ Replace href with your real URL -->
+      <a class="link-item" href="https://youtube.com/" target="_blank" rel="noopener">
+        <span class="link-left">
+          <span class="link-freq">[FREQ-03]</span>
+          <span class="link-icon">📺</span>
+          <span class="link-name">YouTube</span>
+        </span>
+        <span class="link-connect">→ CONNECT</span>
+      </a>
+
+      <!-- ✏️ Replace href with your real URL -->
+      <a class="link-item" href="https://x.com/" target="_blank" rel="noopener">
+        <span class="link-left">
+          <span class="link-freq">[FREQ-04]</span>
+          <span class="link-icon">📡</span>
+          <span class="link-name">X / Twitter</span>
+        </span>
+        <span class="link-connect">→ CONNECT</span>
+      </a>
+
+      <!-- ✏️ Local files route — no target="_blank" -->
+      <a class="link-item" href="/files">
+        <span class="link-left">
+          <span class="link-freq">[FREQ-05]</span>
+          <span class="link-icon">📂</span>
+          <span class="link-name">Files</span>
+        </span>
+        <span class="link-connect">→ CONNECT</span>
+      </a>
+
+    </nav>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      TRANSMISSION END // STAY FROSTY
+    </footer>
+
+  </main>
+
+  <script>
+    // ─── LIVE CLOCK ─────────────────────────────────────────────
+    const clockEl = document.getElementById('clock');
+
+    // Session start time used to count up a "day" counter.
+    // Starts at DAY 247 and increments every 24 real hours from page load.
+    const SESSION_START = Date.now();
+    const BASE_DAY = 247;
+
+    function pad(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function updateClock() {
+      const now  = new Date();
+      const hh   = pad(now.getHours());
+      const mm   = pad(now.getMinutes());
+      const ss   = pad(now.getSeconds());
+
+      // Advance day counter for every 24 h the page has been open
+      const elapsed  = Date.now() - SESSION_START;
+      const daysGone = Math.floor(elapsed / (1000 * 60 * 60 * 24));
+      const day      = BASE_DAY + daysGone;
+
+      clockEl.textContent = `DAY ${day} // ${hh}:${mm}:${ss}`;
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>

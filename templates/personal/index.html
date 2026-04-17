@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Personal Page</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --border: #30363d;
+    --text: #c9d1d9; --text2: #8b949e;
+    --blue: #58a6ff; --purple: #bf91f3; --green: #3fb950;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+  /* ── Hero ── */
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 2rem; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, #1f6feb22 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .avatar {
+    width: 120px; height: 120px; border-radius: 50%;
+    border: 3px solid var(--border);
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3rem; margin-bottom: 1.5rem;
+    box-shadow: 0 0 40px #58a6ff33;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800;
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: .5rem;
+  }
+  .hero .tagline {
+    font-size: 1.1rem; color: var(--text2); max-width: 500px;
+    line-height: 1.6; margin-bottom: 2rem;
+  }
+  .hero-links { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; }
+  .hero-btn {
+    padding: .6rem 1.4rem; border-radius: 99px;
+    text-decoration: none; font-weight: 600; font-size: .9rem;
+    transition: .2s; cursor: pointer;
+  }
+  .hero-btn.primary {
+    background: linear-gradient(135deg, var(--blue), #4078c8);
+    color: #fff; border: none;
+  }
+  .hero-btn.secondary {
+    background: none; border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .hero-btn:hover { opacity: .85; transform: translateY(-2px); }
+
+  /* ── Sections ── */
+  .section { padding: 4rem 1.5rem; max-width: 860px; margin: auto; }
+  .section h2 {
+    font-size: 1.6rem; font-weight: 700; color: var(--blue);
+    margin-bottom: 1.5rem; display: flex; align-items: center; gap: .5rem;
+  }
+  .section h2::after {
+    content: ''; flex: 1; height: 1px; background: var(--border); margin-left: .5rem;
+  }
+
+  /* About */
+  .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .about-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.25rem;
+  }
+  .about-card h3 { color: var(--blue); margin-bottom: .5rem; font-size: .95rem; }
+  .about-card p  { color: var(--text2); font-size: .88rem; line-height: 1.6; }
+
+  /* Social links */
+  .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+  .link-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1rem 1.25rem;
+    text-decoration: none; color: var(--text);
+    display: flex; align-items: center; gap: .75rem;
+    transition: .2s;
+  }
+  .link-card:hover { border-color: var(--blue); transform: translateY(-2px); background: #1f6feb11; }
+  .link-icon { font-size: 1.5rem; }
+  .link-card h4 { font-size: .9rem; }
+  .link-card p  { font-size: .78rem; color: var(--text2); }
+
+  /* Footer */
+  footer {
+    text-align: center; padding: 2rem;
+    color: var(--text2); font-size: .8rem;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 600px) {
+    .about-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="avatar">😎</div>
+  <h1>Your Name Here</h1>
+  <p class="tagline">Welcome to my personal corner of the internet.<br>
+     I'm into gaming, photography, and cool tech projects.</p>
+  <div class="hero-links">
+    <a href="#about"  class="hero-btn primary">About Me</a>
+    <a href="#links"  class="hero-btn secondary">My Links</a>
+  </div>
+</section>
+
+<!-- About -->
+<section class="section" id="about">
+  <h2>About Me</h2>
+  <div class="about-grid">
+    <div class="about-card">
+      <h3>🎮 Interests</h3>
+      <p>Gaming, modding, and building cool stuff. I love exploring new tech and sharing what I find with friends.</p>
+    </div>
+    <div class="about-card">
+      <h3>📍 Location</h3>
+      <p>Somewhere on the internet — or maybe your living room. This server is running from my own PC!</p>
+    </div>
+    <div class="about-card">
+      <h3>💡 Projects</h3>
+      <p>I run this personal server to share files and links with friends. It's powered by My Own Place.</p>
+    </div>
+    <div class="about-card">
+      <h3>✉️ Contact</h3>
+      <p>Hit me up on Discord or wherever you found this link. I don't bite!</p>
+    </div>
+  </div>
+</section>
+
+<!-- Links -->
+<section class="section" id="links">
+  <h2>My Links</h2>
+  <div class="links-grid">
+    <!-- ✏️ Replace each href with your real URL, then save. -->
+    <!-- Example Steam profile: https://steamcommunity.com/id/yourname/ -->
+    <a class="link-card" href="https://store.steampowered.com/" target="_blank">
+      <span class="link-icon">🎮</span>
+      <div><h4>Steam</h4><p>Check my game library</p></div>
+    </a>
+    <!-- Example Discord invite: https://discord.gg/abc123 -->
+    <a class="link-card" href="https://discord.com/" target="_blank">
+      <span class="link-icon">💬</span>
+      <div><h4>Discord</h4><p>Chat with me</p></div>
+    </a>
+    <!-- /gallery.html serves your gallery page — create it or remove this card -->
+    <a class="link-card" href="/gallery.html" target="_blank">
+      <span class="link-icon">📸</span>
+      <div><h4>Photos</h4><p>My photo gallery</p></div>
+    </a>
+    <!-- /files serves the files/ folder in your website root -->
+    <a class="link-card" href="/files" target="_blank">
+      <span class="link-icon">📦</span>
+      <div><h4>Files</h4><p>Shared downloads</p></div>
+    </a>
+    <!-- Example YouTube channel: https://youtube.com/@yourchannel -->
+    <a class="link-card" href="https://youtube.com/" target="_blank">
+      <span class="link-icon">📺</span>
+      <div><h4>YouTube</h4><p>My favourite videos</p></div>
+    </a>
+    <!-- Example Twitter/X: https://x.com/yourhandle -->
+    <a class="link-card" href="https://x.com/" target="_blank">
+      <span class="link-icon">🐦</span>
+      <div><h4>Twitter / X</h4><p>Follow me</p></div>
+    </a>
+  </div>
+</section>
+
+<footer>
+  <p>Made with ❤️ using <strong>My Own Place</strong> — running from my own computer.</p>
+</footer>
+
+</body>
+</html>

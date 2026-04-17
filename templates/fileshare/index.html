@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>File Share</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --border: #30363d;
+    --text: #c9d1d9; --text2: #8b949e; --text3: #6e7681;
+    --blue: #58a6ff; --green: #3fb950; --purple: #bf91f3;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+  header {
+    padding: 3rem 1.5rem 2rem; text-align: center;
+    background: radial-gradient(ellipse at 50% -20%, #3fb95015 0%, transparent 70%);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    font-size: 2.2rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--green), var(--blue));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  header p { color: var(--text2); margin-top: .5rem; }
+
+  /* Search + stats bar */
+  .toolbar {
+    display: flex; align-items: center; gap: .75rem;
+    padding: 1.25rem 1.5rem; max-width: 1000px; margin: auto;
+    flex-wrap: wrap;
+  }
+  .search-box {
+    flex: 1; min-width: 200px;
+    display: flex; align-items: center; gap: .5rem;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; padding: .5rem .9rem;
+  }
+  .search-box input {
+    flex: 1; background: none; border: none; outline: none;
+    color: var(--text); font-size: .9rem;
+  }
+  .search-box input::placeholder { color: var(--text3); }
+  .stats { color: var(--text2); font-size: .82rem; }
+
+  /* Category filters */
+  .filters {
+    display: flex; gap: .5rem; flex-wrap: wrap;
+    padding: 0 1.5rem .75rem; max-width: 1000px; margin: auto;
+  }
+  .filter-chip {
+    padding: .3rem .8rem; border-radius: 99px; font-size: .78rem;
+    background: var(--bg2); border: 1px solid var(--border);
+    cursor: pointer; color: var(--text2); transition: .2s;
+  }
+  .filter-chip.active { background: var(--green); border-color: var(--green); color: #0d1117; }
+  .filter-chip:hover:not(.active) { border-color: var(--text2); color: var(--text); }
+
+  /* File grid */
+  .file-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem; padding: .5rem 1.5rem 3rem; max-width: 1000px; margin: auto;
+  }
+  .file-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.1rem; display: flex;
+    align-items: flex-start; gap: .9rem;
+    transition: .2s; text-decoration: none; color: var(--text);
+    cursor: pointer;
+  }
+  .file-card:hover {
+    border-color: var(--green); transform: translateY(-2px);
+    box-shadow: 0 4px 20px #3fb95020;
+  }
+  .file-card-icon {
+    font-size: 2rem; flex-shrink: 0; margin-top: .1rem;
+  }
+  .file-card-info { min-width: 0; }
+  .file-card-info h3 {
+    font-size: .9rem; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .file-card-info .meta { font-size: .75rem; color: var(--text2); margin-top: .25rem; }
+  .file-card-info .size { font-size: .8rem; color: var(--green); font-weight: 600; margin-top: .3rem; }
+  .file-card .dl-btn {
+    margin-left: auto; flex-shrink: 0; align-self: center;
+    background: var(--green); border: none; border-radius: 8px;
+    color: #0d1117; font-weight: 700; font-size: .75rem;
+    padding: .4rem .7rem; cursor: pointer; transition: .2s;
+    text-decoration: none;
+  }
+  .file-card .dl-btn:hover { opacity: .85; }
+
+  .empty {
+    grid-column: 1/-1; text-align: center;
+    padding: 4rem; color: var(--text2);
+  }
+  .empty .icon { font-size: 3rem; margin-bottom: 1rem; }
+  .loading { grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text2); }
+
+  footer { text-align: center; padding: 2rem; color: var(--text3); font-size: .78rem; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📦 Shared Files</h1>
+  <p>Files I'm sharing with you — click to download</p>
+</header>
+
+<div class="toolbar">
+  <div class="search-box">
+    <span>🔍</span>
+    <input type="text" id="search" placeholder="Search files…">
+  </div>
+  <span class="stats" id="stats">Loading…</span>
+</div>
+
+<div class="filters">
+  <button class="filter-chip active" data-filter="all">All Files</button>
+  <button class="filter-chip" data-filter="images">🖼 Images</button>
+  <button class="filter-chip" data-filter="videos">🎬 Videos</button>
+  <button class="filter-chip" data-filter="documents">📄 Documents</button>
+  <button class="filter-chip" data-filter="archives">📦 Archives</button>
+  <button class="filter-chip" data-filter="other">📎 Other</button>
+</div>
+
+<div class="file-grid" id="file-grid">
+  <div class="loading">⏳ Loading files…</div>
+</div>
+
+<footer>Served by My Own Place — <span id="server-time"></span></footer>
+
+<script>
+  const ICONS = {
+    images:    { ext: ['png','jpg','jpeg','gif','webp','svg','bmp','ico'], icon: '🖼' },
+    videos:    { ext: ['mp4','mov','avi','mkv','webm','flv'], icon: '🎬' },
+    documents: { ext: ['pdf','doc','docx','txt','md','xls','xlsx','ppt','pptx','csv'], icon: '📄' },
+    archives:  { ext: ['zip','rar','7z','tar','gz','bz2'], icon: '📦' },
+    audio:     { ext: ['mp3','wav','flac','ogg','aac','m4a'], icon: '🎵' },
+    code:      { ext: ['html','css','js','json','xml','py','sh','bat'], icon: '💻' },
+  };
+
+  function getCategory (name) {
+    const ext = name.split('.').pop().toLowerCase();
+    for (const [cat, info] of Object.entries(ICONS))
+      if (info.ext.includes(ext)) return cat;
+    return 'other';
+  }
+  function getIcon (name) {
+    const ext = name.split('.').pop().toLowerCase();
+    for (const info of Object.values(ICONS))
+      if (info.ext.includes(ext)) return info.icon;
+    return '📎';
+  }
+  function fmtBytes (b) {
+    b = Number(b);
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+    if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+    return (b/1073741824).toFixed(1) + ' GB';
+  }
+  function fmtDate (d) { return new Date(d).toLocaleDateString(); }
+
+  let allFiles = [], activeFilter = 'all', searchQuery = '';
+
+  async function loadFiles () {
+    try {
+      const r = await fetch('/__api/files');
+      const d = await r.json();
+      allFiles = d.files || [];
+      document.getElementById('stats').textContent =
+        `${allFiles.length} files`;
+      renderFiles();
+    } catch (e) {
+      document.getElementById('file-grid').innerHTML =
+        '<div class="empty"><div class="icon">⚠️</div><p>Could not load file list.<br>Make sure the server is running.</p></div>';
+    }
+  }
+
+  function renderFiles () {
+    const q = searchQuery.toLowerCase();
+    const visible = allFiles.filter(f => {
+      const cat = getCategory(f.name);
+      const matchCat = activeFilter === 'all' || cat === activeFilter;
+      const matchQ   = !q || f.name.toLowerCase().includes(q) || f.path.toLowerCase().includes(q);
+      return matchCat && matchQ;
+    });
+
+    const grid = document.getElementById('file-grid');
+    if (!visible.length) {
+      grid.innerHTML = '<div class="empty"><div class="icon">📭</div><p>No files match your search.</p></div>';
+      return;
+    }
+
+    grid.innerHTML = visible.map(f => {
+      const icon = getIcon(f.name);
+      const size = fmtBytes(f.size);
+      const date = fmtDate(f.modified);
+      // build a safe path for the download href
+      const href = '/' + f.path.replace(/\\/g, '/').replace(/^\//, '');
+      const dirPart = f.path.includes('/') ? f.path.replace(/\/[^/]+$/, '') : '';
+      return `<a class="file-card" href="${href}" download="${f.name}">
+        <div class="file-card-icon">${icon}</div>
+        <div class="file-card-info">
+          <h3 title="${f.path}">${f.name}</h3>
+          <div class="meta">${dirPart ? '📁 ' + dirPart + ' · ' : ''}${date}</div>
+          <div class="size">⬇ ${size}</div>
+        </div>
+        <span class="dl-btn">⬇</span>
+      </a>`;
+    }).join('');
+  }
+
+  document.getElementById('search').addEventListener('input', function () {
+    searchQuery = this.value;
+    renderFiles();
+  });
+
+  document.querySelectorAll('.filter-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      renderFiles();
+    });
+  });
+
+  document.getElementById('server-time').textContent = new Date().toLocaleString();
+
+  loadFiles();
+</script>
+</body>
+</html>

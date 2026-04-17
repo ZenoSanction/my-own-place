@@ -1,0 +1,82 @@
+{
+  "name": "my-own-place",
+  "version": "1.0.0",
+  "description": "Your personal web and FTP server — share files with friends securely",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64",
+    "portable": "electron-builder --win portable --x64",
+    "release": "electron-builder --win --x64 --publish always"
+  },
+  "dependencies": {
+    "archiver": "^6.0.1",
+    "cookie": "^0.6.0",
+    "electron-updater": "^6.8.3",
+    "express": "^4.18.3",
+    "ftp-srv": "^4.6.2",
+    "mime-types": "^2.1.35",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "electron": "^29.1.4",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.myownplace.app",
+    "productName": "My Own Place",
+    "copyright": "Copyright © 2025 My Own Place",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "My Own Place",
+      "license": "LICENSE.txt"
+    },
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!*.bat",
+      "!*.sh",
+      "!*.vbs",
+      "!.git/**",
+      "!templates/**"
+    ],
+    "extraResources": [
+      {
+        "from": "templates",
+        "to": "templates"
+      }
+    ],
+    "asar": true,
+    "publish": {
+      "provider": "github",
+      "owner": "ZenoSanction",
+      "repo": "my-own-place"
+    }
+  }
+}

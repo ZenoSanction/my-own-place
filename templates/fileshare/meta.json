@@ -1,0 +1,6 @@
+{
+  "name": "File Share",
+  "description": "A file download hub that automatically lists all files you've shared. Friends can see and download everything instantly.",
+  "emoji": "📦",
+  "tags": ["files", "download", "sharing"]
+}

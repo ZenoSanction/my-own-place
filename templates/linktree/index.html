@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Links</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #0d1117;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem 1rem;
+    position: relative; overflow-x: hidden;
+  }
+  /* Animated background */
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 20%, #58a6ff0d 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, #bf91f30d 0%, transparent 50%);
+    pointer-events: none;
+    animation: bgmove 12s ease-in-out infinite alternate;
+  }
+  @keyframes bgmove {
+    0%   { transform: scale(1)    rotate(0deg); }
+    100% { transform: scale(1.05) rotate(2deg); }
+  }
+
+  .container {
+    width: 100%; max-width: 480px;
+    position: relative; z-index: 1;
+  }
+
+  /* Profile */
+  .profile { text-align: center; margin-bottom: 2rem; }
+  .avatar {
+    width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 1rem;
+    background: linear-gradient(135deg, #58a6ff, #bf91f3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.8rem;
+    box-shadow: 0 0 40px #58a6ff44;
+    border: 3px solid #ffffff22;
+  }
+  .profile h1 { font-size: 1.6rem; font-weight: 800; color: #c9d1d9; }
+  .profile p  { color: #8b949e; margin-top: .4rem; font-size: .9rem; line-height: 1.5; }
+
+  /* Links */
+  .links { display: flex; flex-direction: column; gap: .75rem; }
+  .link {
+    display: flex; align-items: center; gap: 1rem;
+    background: #161b22; border: 1px solid #30363d;
+    border-radius: 14px; padding: .9rem 1.25rem;
+    text-decoration: none; color: #c9d1d9;
+    transition: .2s; cursor: pointer;
+    position: relative; overflow: hidden;
+  }
+  .link::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, #ffffff05);
+    opacity: 0; transition: .2s;
+  }
+  .link:hover::before { opacity: 1; }
+  .link:hover {
+    border-color: #58a6ff;
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 4px 20px #58a6ff22;
+  }
+  .link:active { transform: scale(.98); }
+  .link-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; flex-shrink: 0;
+    background: #21262d;
+  }
+  .link-text h3 { font-size: .95rem; font-weight: 600; }
+  .link-text p  { font-size: .78rem; color: #8b949e; }
+  .link-arrow { margin-left: auto; color: #30363d; font-size: 1rem; transition: .2s; }
+  .link:hover .link-arrow { color: #58a6ff; transform: translateX(2px); }
+
+  /* Section headings */
+  .section-label {
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .1em;
+    color: #6e7681; text-align: center; margin: 1rem 0 .5rem;
+  }
+
+  /* Footer */
+  footer {
+    text-align: center; margin-top: 2.5rem;
+    color: #6e7681; font-size: .75rem;
+  }
+  footer a { color: #58a6ff; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="profile">
+    <div class="avatar">🚀</div>
+    <h1>Your Name</h1>
+    <p>Welcome to my link hub! Find everything<br>I want to share in one place.</p>
+  </div>
+
+  <div class="section-label">🌐 Online</div>
+  <div class="links">
+    <!-- ✏️ Replace the href values below with your real URLs, then save. -->
+    <!-- Example Discord invite: https://discord.gg/abc123          -->
+    <a class="link" href="https://discord.com/" target="_blank">
+      <div class="link-icon">💬</div>
+      <div class="link-text"><h3>Discord</h3><p>Join my server or DM me</p></div>
+      <span class="link-arrow">›</span>
+    </a>
+    <!-- Example Steam profile: https://steamcommunity.com/id/yourname/ -->
+    <a class="link" href="https://store.steampowered.com/" target="_blank">
+      <div class="link-icon">🎮</div>
+      <div class="link-text"><h3>Steam Profile</h3><p>Check out my game collection</p></div>
+      <span class="link-arrow">›</span>
+    </a>
+    <!-- Example YouTube channel: https://youtube.com/@yourchannel  -->
+    <a class="link" href="https://youtube.com/" target="_blank">
+      <div class="link-icon">📺</div>
+      <div class="link-text"><h3>YouTube</h3><p>Videos I love or make</p></div>
+      <span class="link-arrow">›</span>
+    </a>
+    <!-- Example Twitter/X: https://x.com/yourhandle               -->
+    <a class="link" href="https://x.com/" target="_blank">
+      <div class="link-icon">🐦</div>
+      <div class="link-text"><h3>Twitter / X</h3><p>Random thoughts</p></div>
+      <span class="link-arrow">›</span>
+    </a>
+  </div>
+
+  <div class="section-label">📦 Files &amp; More</div>
+  <div class="links">
+    <!-- /files serves the files/ folder in your website root — create it in File Manager -->
+    <a class="link" href="/files" target="_blank">
+      <div class="link-icon">📁</div>
+      <div class="link-text"><h3>Shared Files</h3><p>Downloads &amp; stuff I'm sharing</p></div>
+      <span class="link-arrow">›</span>
+    </a>
+    <!-- Link to a gallery page, or remove this block if you don't have one -->
+    <a class="link" href="/gallery.html" target="_blank">
+      <div class="link-icon">📸</div>
+      <div class="link-text"><h3>Photo Gallery</h3><p>Browse my photos</p></div>
+      <span class="link-arrow">›</span>
+    </a>
+    <!-- Replace with your real email address -->
+    <a class="link" href="mailto:you@example.com">
+      <div class="link-icon">✉️</div>
+      <div class="link-text"><h3>Email Me</h3><p>Get in touch</p></div>
+      <span class="link-arrow">›</span>
+    </a>
+  </div>
+
+  <footer>
+    <p>Hosted on my own PC using <a href="#">My Own Place</a></p>
+  </footer>
+</div>
+</body>
+</html>

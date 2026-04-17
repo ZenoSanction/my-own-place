@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- =============================================
+       CUSTOMIZE: Page title and meta description
+  ============================================== -->
+  <title>YourBrand — We Build Things That Matter</title>
+  <meta name="description" content="We help businesses grow through thoughtful design, modern development, and smart digital strategy." />
+
+  <style>
+    /* ================================================
+       CSS CUSTOM PROPERTIES — edit here to retheme
+    ================================================ */
+    :root {
+      --bg:             #ffffff;
+      --bg-dark:        #0a1628;
+      --surface:        #f8fafc;
+      --border:         #e2e8f0;
+      --accent:         #2563eb;
+      --accent2:        #0ea5e9;
+      --accent-grad:    linear-gradient(135deg, #2563eb, #0ea5e9);
+      --text:           #0f172a;
+      --text2:          #64748b;
+      --text-light:     #f1f5f9;
+      --radius:         12px;
+      --radius-sm:      8px;
+      --shadow-sm:      0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05);
+      --shadow-md:      0 4px 16px rgba(0,0,0,.1);
+      --shadow-lg:      0 12px 40px rgba(0,0,0,.15);
+      --transition:     0.25s ease;
+      --font:           'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    /* ======= RESET & BASE ======= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    ul { list-style: none; }
+
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ======= SCROLL-FADE ANIMATION ======= */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    /* stagger children */
+    .reveal-stagger > * {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal-stagger.visible > *:nth-child(1) { opacity:1; transform:translateY(0); transition-delay: 0.05s; }
+    .reveal-stagger.visible > *:nth-child(2) { opacity:1; transform:translateY(0); transition-delay: 0.15s; }
+    .reveal-stagger.visible > *:nth-child(3) { opacity:1; transform:translateY(0); transition-delay: 0.25s; }
+    .reveal-stagger.visible > *:nth-child(4) { opacity:1; transform:translateY(0); transition-delay: 0.35s; }
+
+    /* ======= SECTION SHARED ======= */
+    section { padding: 96px 0; }
+
+    .section-label {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .section-heading {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .section-sub {
+      font-size: 1.05rem;
+      color: var(--text2);
+      max-width: 520px;
+    }
+
+    /* ================================================
+       1. NAVIGATION
+    ================================================ */
+    #nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg);
+      border-bottom: 1px solid transparent;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    /* JS adds this class on scroll */
+    #nav.scrolled {
+      border-color: var(--border);
+      box-shadow: 0 2px 16px rgba(0,0,0,.06);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 68px;
+      gap: 24px;
+    }
+
+    /* -- Logo -- */
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 1.05rem;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+
+    /* CUSTOMIZE: Replace .logo-icon with your own <img> or SVG */
+    .logo-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: var(--accent-grad);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: #fff;
+      font-weight: 900;
+    }
+
+    /* -- Desktop links -- */
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-links a {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text2);
+      transition: color var(--transition);
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    /* -- CTA -- */
+    .nav-cta {
+      display: inline-flex;
+      align-items: center;
+      padding: 9px 20px;
+      background: var(--accent);
+      color: #fff !important;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border-radius: 999px;
+      transition: background var(--transition), transform var(--transition);
+      flex-shrink: 0;
+    }
+    .nav-cta:hover { background: var(--accent2); transform: translateY(-1px); }
+
+    /* -- Hamburger -- */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 4px;
+    }
+    .hamburger span {
+      display: block;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: transform var(--transition), opacity var(--transition);
+    }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* -- Mobile dropdown -- */
+    .mobile-menu {
+      display: none;
+      flex-direction: column;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 16px 24px 20px;
+      gap: 4px;
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text2);
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      transition: color var(--transition);
+    }
+    .mobile-menu a:last-child { border-bottom: none; }
+    .mobile-menu a:hover { color: var(--accent); }
+
+    /* ================================================
+       2. HERO
+    ================================================ */
+    #hero {
+      background: var(--bg-dark);
+      padding: 120px 0 100px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* -- Decorative background -- */
+    #hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      /* Grid-dot pattern */
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+    }
+
+    /* Soft glow blobs */
+    .hero-glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+      pointer-events: none;
+      opacity: 0.35;
+    }
+    .hero-glow-1 {
+      width: 500px; height: 500px;
+      background: #2563eb;
+      top: -120px; right: -80px;
+    }
+    .hero-glow-2 {
+      width: 340px; height: 340px;
+      background: #0ea5e9;
+      bottom: -80px; left: 10%;
+    }
+
+    /* Geometric accent lines */
+    .hero-geo {
+      position: absolute;
+      right: 80px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      opacity: 0.12;
+    }
+    .hero-geo span {
+      display: block;
+      width: 8px;
+      height: 8px;
+      background: var(--text-light);
+      border-radius: 50%;
+    }
+
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 64px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-content {}
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(37,99,235,0.18);
+      border: 1px solid rgba(37,99,235,0.35);
+      color: #93c5fd;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: #60a5fa;
+      border-radius: 50%;
+    }
+
+    /* CUSTOMIZE: Main headline */
+    .hero-headline {
+      font-size: clamp(2.8rem, 6vw, 4.2rem);
+      font-weight: 900;
+      line-height: 1.1;
+      color: var(--text-light);
+      margin-bottom: 20px;
+    }
+
+    .hero-headline .gradient-text {
+      background: var(--accent-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* CUSTOMIZE: Subheadline */
+    .hero-sub {
+      font-size: 1.1rem;
+      color: #94a3b8;
+      max-width: 480px;
+      margin-bottom: 36px;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 26px;
+      border-radius: 999px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
+      border: none;
+    }
+    .btn:hover { transform: translateY(-2px); }
+
+    .btn-white {
+      background: var(--text-light);
+      color: var(--text);
+    }
+    .btn-white:hover { box-shadow: var(--shadow-md); }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-light);
+      border: 1.5px solid rgba(241,245,249,0.3);
+    }
+    .btn-outline:hover {
+      background: rgba(241,245,249,0.08);
+      border-color: rgba(241,245,249,0.5);
+    }
+
+    /* -- Floating UI card mockup (CSS-only) -- */
+    .hero-visual {
+      position: relative;
+    }
+
+    .ui-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 24px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-12px); }
+    }
+
+    .ui-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .ui-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .ui-dot:nth-child(1) { background: #ef4444; }
+    .ui-dot:nth-child(2) { background: #f59e0b; }
+    .ui-dot:nth-child(3) { background: #22c55e; }
+
+    .ui-bar { height: 10px; border-radius: 6px; margin-bottom: 10px; }
+    .ui-bar-full  { background: rgba(255,255,255,0.15); width: 100%; }
+    .ui-bar-75    { background: rgba(37,99,235,0.5);    width: 75%; }
+    .ui-bar-50    { background: rgba(14,165,233,0.4);   width: 50%; }
+    .ui-bar-85    { background: rgba(255,255,255,0.1);  width: 85%; }
+
+    .ui-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .ui-box {
+      flex: 1;
+      height: 56px;
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+    }
+
+    .ui-stat {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(37,99,235,0.15);
+      border: 1px solid rgba(37,99,235,0.3);
+      border-radius: var(--radius-sm);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ui-stat-val {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #60a5fa;
+    }
+    .ui-stat-label {
+      font-size: 0.72rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* small badge on card */
+    .ui-badge {
+      position: absolute;
+      top: -14px;
+      right: 24px;
+      background: var(--accent-grad);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 999px;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+    }
+
+    /* ================================================
+       3. SERVICES
+    ================================================ */
+    #services {
+      background: var(--bg);
+    }
+
+    .services-header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+    .services-header .section-sub {
+      margin: 0 auto;
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+    }
+
+    .service-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow var(--transition), border-top-color var(--transition), transform var(--transition);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .service-card:nth-child(2) { border-top-color: var(--accent2); }
+    .service-card:nth-child(3) { border-top-color: #8b5cf6; }
+
+    .service-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-4px);
+    }
+    .service-card:hover .service-icon { transform: scale(1.1); }
+
+    .service-icon {
+      font-size: 2.2rem;
+      display: block;
+      transition: transform var(--transition);
+      line-height: 1;
+    }
+
+    /* CUSTOMIZE: Service card titles */
+    .service-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* CUSTOMIZE: Service descriptions */
+    .service-desc {
+      font-size: 0.92rem;
+      color: var(--text2);
+      line-height: 1.65;
+      flex: 1;
+    }
+
+    .service-link {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: gap var(--transition), color var(--transition);
+    }
+    .service-link:hover { gap: 8px; color: var(--accent2); }
+
+    /* ================================================
+       4. ABOUT
+    ================================================ */
+    #about {
+      background: var(--surface);
+    }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 80px;
+      align-items: center;
+    }
+
+    /* CUSTOMIZE: About heading and body copy */
+    .about-body {
+      font-size: 1rem;
+      color: var(--text2);
+      line-height: 1.75;
+      margin-bottom: 32px;
+    }
+
+    .values-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .value-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .value-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: rgba(37,99,235,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .value-text strong {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+    .value-text span {
+      font-size: 0.87rem;
+      color: var(--text2);
+    }
+
+    /* -- Stats 2x2 grid -- */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .stat-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 22px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow var(--transition), transform var(--transition);
+    }
+    .stat-box:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+    .stat-box:first-child { border-top: 3px solid var(--accent); }
+    .stat-box:nth-child(2) { border-top: 3px solid var(--accent2); }
+    .stat-box:nth-child(3) { border-top: 3px solid #8b5cf6; }
+    .stat-box:nth-child(4) { border-top: 3px solid #22c55e; }
+
+    /* CUSTOMIZE: Metric numbers */
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    /* CUSTOMIZE: Metric labels */
+    .stat-label {
+      font-size: 0.82rem;
+      color: var(--text2);
+      font-weight: 500;
+    }
+
+    /* ================================================
+       5. WORK / PORTFOLIO
+    ================================================ */
+    #work {
+      background: var(--bg);
+    }
+
+    .work-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .work-link {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: gap var(--transition);
+    }
+    .work-link:hover { gap: 10px; }
+
+    .work-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    /* CUSTOMIZE: Add real images via background-image or <img> */
+    .work-tile {
+      aspect-ratio: 16 / 9;
+      border-radius: var(--radius);
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .work-tile:hover .work-tile-inner { transform: scale(1.04); }
+    .work-tile:hover .work-tile-overlay { opacity: 1; }
+
+    .work-tile-inner {
+      position: absolute;
+      inset: 0;
+      transition: transform 0.4s ease;
+    }
+
+    .work-tile:nth-child(1) .work-tile-inner {
+      background: linear-gradient(135deg, #0a1628 0%, #1e3a5f 100%);
+    }
+    .work-tile:nth-child(2) .work-tile-inner {
+      background: linear-gradient(135deg, #14104a 0%, #2563eb 100%);
+    }
+    .work-tile:nth-child(3) .work-tile-inner {
+      background: linear-gradient(135deg, #0c2a1a 0%, #059669 100%);
+    }
+
+    /* Subtle inner texture */
+    .work-tile-inner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    .work-tile-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: flex-end;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .work-tile-info {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 48px 20px 18px;
+      background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%);
+    }
+
+    /* CUSTOMIZE: Project names */
+    .work-tile-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+    .work-tile-tag {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.65);
+      letter-spacing: 0.04em;
+    }
+
+    /* ================================================
+       6. TESTIMONIAL
+    ================================================ */
+    #testimonial {
+      background: var(--bg-dark);
+      padding: 96px 0;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #testimonial::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    .testimonial-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .quote-mark {
+      font-size: 6rem;
+      line-height: 0.7;
+      font-family: Georgia, serif;
+      background: var(--accent-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      display: block;
+      margin-bottom: 24px;
+      opacity: 0.7;
+    }
+
+    /* CUSTOMIZE: Testimonial quote */
+    .testimonial-quote {
+      font-size: clamp(1.1rem, 2.5vw, 1.45rem);
+      color: var(--text-light);
+      font-weight: 500;
+      line-height: 1.65;
+      font-style: italic;
+      margin-bottom: 32px;
+    }
+
+    .testimonial-attribution {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .attribution-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--accent-grad);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    /* CUSTOMIZE: Client name and company */
+    .attribution-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-light);
+    }
+    .attribution-company {
+      font-size: 0.82rem;
+      color: #64748b;
+    }
+
+    /* ================================================
+       7. CONTACT
+    ================================================ */
+    #contact {
+      background: var(--bg);
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: start;
+    }
+
+    /* CUSTOMIZE: Contact info items */
+    .contact-info-list {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      margin-top: 28px;
+    }
+
+    .contact-info-item {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .contact-info-icon {
+      width: 42px;
+      height: 42px;
+      background: rgba(37,99,235,0.1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .contact-info-text strong {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .contact-info-text span {
+      font-size: 0.9rem;
+      color: var(--text2);
+    }
+
+    /* -- Contact Form -- */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: var(--font);
+      font-size: 0.92rem;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      outline: none;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .btn-gradient {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent-grad);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
+      letter-spacing: 0.02em;
+    }
+    .btn-gradient:hover {
+      opacity: 0.88;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(37,99,235,0.35);
+    }
+
+    /* ================================================
+       8. FOOTER
+    ================================================ */
+    #footer {
+      background: var(--bg-dark);
+      padding: 64px 0 0;
+    }
+
+    .footer-main {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr;
+      gap: 48px;
+      padding-bottom: 48px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .footer-brand .nav-logo {
+      color: var(--text-light);
+      margin-bottom: 14px;
+    }
+
+    /* CUSTOMIZE: Footer tagline */
+    .footer-tagline {
+      font-size: 0.88rem;
+      color: #64748b;
+      line-height: 1.65;
+      max-width: 260px;
+    }
+
+    .footer-col-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-light);
+      margin-bottom: 16px;
+    }
+
+    .footer-links {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .footer-links a {
+      font-size: 0.88rem;
+      color: #64748b;
+      transition: color var(--transition);
+    }
+    .footer-links a:hover { color: var(--text-light); }
+
+    /* Social icons */
+    .social-links {
+      display: flex;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    /* CUSTOMIZE: Replace SVG paths with your actual social icons or use a library */
+    .social-link {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 1rem;
+      transition: background var(--transition), color var(--transition);
+    }
+    .social-link:hover {
+      background: rgba(37,99,235,0.25);
+      color: #60a5fa;
+    }
+
+    .footer-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    /* CUSTOMIZE: Copyright year and name */
+    .footer-copy {
+      font-size: 0.82rem;
+      color: #475569;
+    }
+
+    .footer-bottom-links {
+      display: flex;
+      gap: 20px;
+    }
+    .footer-bottom-links a {
+      font-size: 0.82rem;
+      color: #475569;
+      transition: color var(--transition);
+    }
+    .footer-bottom-links a:hover { color: #94a3b8; }
+
+    /* ================================================
+       RESPONSIVE
+    ================================================ */
+    @media (max-width: 1024px) {
+      .hero-inner   { grid-template-columns: 1fr; }
+      .hero-visual  { display: none; }
+      .about-grid   { grid-template-columns: 1fr; gap: 48px; }
+      .footer-main  { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      section { padding: 72px 0; }
+
+      .nav-links, .nav-cta { display: none; }
+      .hamburger { display: flex; }
+
+      .services-grid { grid-template-columns: 1fr; }
+      .work-grid     { grid-template-columns: 1fr; }
+      .contact-grid  { grid-template-columns: 1fr; gap: 48px; }
+      .footer-main   { grid-template-columns: 1fr; }
+      .form-row      { grid-template-columns: 1fr; }
+      .stats-grid    { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 480px) {
+      .hero-actions { flex-direction: column; }
+      .btn          { justify-content: center; }
+      .stats-grid   { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ================================================
+       NAVIGATION
+  ================================================ -->
+  <header>
+    <nav id="nav">
+      <div class="container">
+        <div class="nav-inner">
+
+          <!-- CUSTOMIZE: Replace icon letter and brand name -->
+          <a href="#" class="nav-logo">
+            <div class="logo-icon">Y</div>
+            YourBrand
+          </a>
+
+          <!-- Desktop nav links -->
+          <ul class="nav-links">
+            <li><a href="#services">Services</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#work">Work</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+
+          <!-- CUSTOMIZE: CTA button text -->
+          <a href="#contact" class="nav-cta">Get in Touch</a>
+
+          <!-- Hamburger (mobile) -->
+          <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile dropdown -->
+      <div class="mobile-menu" id="mobileMenu">
+        <a href="#services" class="mobile-link">Services</a>
+        <a href="#about"    class="mobile-link">About</a>
+        <a href="#work"     class="mobile-link">Work</a>
+        <a href="#contact"  class="mobile-link">Contact</a>
+      </div>
+    </nav>
+  </header>
+
+
+  <!-- ================================================
+       HERO
+  ================================================ -->
+  <section id="hero">
+    <!-- Decorative glows -->
+    <div class="hero-glow hero-glow-1"></div>
+    <div class="hero-glow hero-glow-2"></div>
+
+    <!-- Decorative dots grid (top-right corner) -->
+    <div class="hero-geo" aria-hidden="true">
+      <!-- 6×8 grid of dots -->
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+
+    <div class="container">
+      <div class="hero-inner">
+
+        <!-- Hero content -->
+        <div class="hero-content reveal">
+
+          <!-- CUSTOMIZE: Badge / pill label -->
+          <div class="hero-badge">Available for new projects</div>
+
+          <!-- CUSTOMIZE: Main headline -->
+          <h1 class="hero-headline">
+            <span class="gradient-text">We Build Things</span><br>
+            That Matter
+          </h1>
+
+          <!-- CUSTOMIZE: Subheadline / value proposition -->
+          <p class="hero-sub">
+            We partner with ambitious businesses to craft digital experiences that drive real results — from strategy and design through to launch and beyond.
+          </p>
+
+          <div class="hero-actions">
+            <!-- CUSTOMIZE: Button labels and hrefs -->
+            <a href="#services" class="btn btn-white">Our Services</a>
+            <a href="#contact"  class="btn btn-outline">Start a Project &rarr;</a>
+          </div>
+        </div>
+
+        <!-- CSS-only UI mockup card -->
+        <div class="hero-visual reveal">
+          <div class="ui-card">
+            <div class="ui-badge">Live Preview ✦</div>
+
+            <div class="ui-card-header">
+              <div class="ui-dot"></div>
+              <div class="ui-dot"></div>
+              <div class="ui-dot"></div>
+            </div>
+
+            <div class="ui-bar ui-bar-full"></div>
+            <div class="ui-bar ui-bar-75"></div>
+            <div class="ui-bar ui-bar-50"></div>
+            <div class="ui-bar ui-bar-85"></div>
+
+            <div class="ui-row">
+              <div class="ui-box">⚡</div>
+              <div class="ui-box">🎨</div>
+              <div class="ui-box">📈</div>
+            </div>
+
+            <div class="ui-stat">
+              <div>
+                <div class="ui-stat-label">Projects Delivered</div>
+                <div class="ui-stat-val">50+</div>
+              </div>
+              <div>
+                <div class="ui-stat-label">Client Rating</div>
+                <div class="ui-stat-val">4.9★</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ================================================
+       SERVICES
+  ================================================ -->
+  <section id="services">
+    <div class="container">
+
+      <div class="services-header reveal">
+        <span class="section-label">What We Do</span>
+        <!-- CUSTOMIZE: Section heading and subtext -->
+        <h2 class="section-heading">Our Services</h2>
+        <p class="section-sub">Everything you need to establish, grow, and scale your digital presence — delivered with craft and care.</p>
+      </div>
+
+      <div class="services-grid reveal-stagger">
+
+        <!-- CUSTOMIZE: Service 1 -->
+        <div class="service-card">
+          <span class="service-icon">⚡</span>
+          <h3 class="service-title">Web Development</h3>
+          <p class="service-desc">
+            Fast, scalable websites and web apps built with modern technologies. From landing pages to full-stack platforms.
+          </p>
+          <a href="#contact" class="service-link">Learn more &rarr;</a>
+        </div>
+
+        <!-- CUSTOMIZE: Service 2 -->
+        <div class="service-card">
+          <span class="service-icon">🎨</span>
+          <h3 class="service-title">UI/UX Design</h3>
+          <p class="service-desc">
+            Intuitive interfaces and polished visuals that delight users. We turn complex flows into seamless experiences.
+          </p>
+          <a href="#contact" class="service-link">Learn more &rarr;</a>
+        </div>
+
+        <!-- CUSTOMIZE: Service 3 -->
+        <div class="service-card">
+          <span class="service-icon">📈</span>
+          <h3 class="service-title">Digital Strategy</h3>
+          <p class="service-desc">
+            Data-driven roadmaps that align your digital efforts with business goals. Strategy, analytics, and growth.
+          </p>
+          <a href="#contact" class="service-link">Learn more &rarr;</a>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ================================================
+       ABOUT
+  ================================================ -->
+  <section id="about">
+    <div class="container">
+      <div class="about-grid">
+
+        <!-- Left: text content -->
+        <div class="reveal">
+          <span class="section-label">Who We Are</span>
+          <!-- CUSTOMIZE: About heading -->
+          <h2 class="section-heading">About Us</h2>
+
+          <!-- CUSTOMIZE: About body copy -->
+          <p class="about-body">
+            We are a small, focused team of designers, developers, and strategists who genuinely care about the work we put out. No hand-offs, no bloated processes — just direct collaboration and high-quality execution on every project we take on.
+          </p>
+          <p class="about-body">
+            Founded in <!-- CUSTOMIZE: Year -->, we have worked with startups, agencies, and established brands across multiple industries, always with the same commitment: do good work and be easy to work with.
+          </p>
+
+          <!-- CUSTOMIZE: Core values — icons, titles, and descriptions -->
+          <ul class="values-list">
+            <li class="value-item">
+              <div class="value-icon">✦</div>
+              <div class="value-text">
+                <strong>Quality</strong>
+                <span>We sweat the details so your customers don't have to.</span>
+              </div>
+            </li>
+            <li class="value-item">
+              <div class="value-icon">⚡</div>
+              <div class="value-text">
+                <strong>Speed</strong>
+                <span>Efficient processes mean faster delivery without cutting corners.</span>
+              </div>
+            </li>
+            <li class="value-item">
+              <div class="value-icon">🛡</div>
+              <div class="value-text">
+                <strong>Reliability</strong>
+                <span>We do what we say, when we say it. Every time.</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Right: stat boxes -->
+        <div class="stats-grid reveal">
+
+          <!-- CUSTOMIZE: Metrics and labels -->
+          <div class="stat-box">
+            <div class="stat-number">50+</div>
+            <div class="stat-label">Projects Delivered</div>
+          </div>
+
+          <div class="stat-box">
+            <div class="stat-number">5 yrs</div>
+            <div class="stat-label">In Business</div>
+          </div>
+
+          <div class="stat-box">
+            <div class="stat-number">30+</div>
+            <div class="stat-label">Happy Clients</div>
+          </div>
+
+          <div class="stat-box">
+            <div class="stat-number">98%</div>
+            <div class="stat-label">Satisfaction Rate</div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ================================================
+       WORK / PORTFOLIO
+  ================================================ -->
+  <section id="work">
+    <div class="container">
+
+      <div class="work-header reveal">
+        <div>
+          <span class="section-label">Portfolio</span>
+          <!-- CUSTOMIZE: Work section heading -->
+          <h2 class="section-heading">Recent Work</h2>
+        </div>
+        <a href="#contact" class="work-link">See all projects &rarr;</a>
+      </div>
+
+      <div class="work-grid reveal-stagger">
+
+        <!-- CUSTOMIZE: Project tiles — add background-image to .work-tile-inner for real screenshots -->
+        <div class="work-tile">
+          <div class="work-tile-inner"></div>
+          <div class="work-tile-info">
+            <!-- CUSTOMIZE: Project name and category -->
+            <div class="work-tile-name">Apex Platform</div>
+            <div class="work-tile-tag">Web App · Design System</div>
+          </div>
+          <div class="work-tile-overlay"></div>
+        </div>
+
+        <div class="work-tile">
+          <div class="work-tile-inner"></div>
+          <div class="work-tile-info">
+            <div class="work-tile-name">Nova Commerce</div>
+            <div class="work-tile-tag">E-commerce · Branding</div>
+          </div>
+          <div class="work-tile-overlay"></div>
+        </div>
+
+        <div class="work-tile">
+          <div class="work-tile-inner"></div>
+          <div class="work-tile-info">
+            <div class="work-tile-name">Shift Analytics</div>
+            <div class="work-tile-tag">Dashboard · Data Viz</div>
+          </div>
+          <div class="work-tile-overlay"></div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ================================================
+       TESTIMONIAL
+  ================================================ -->
+  <section id="testimonial">
+    <div class="container">
+      <div class="testimonial-inner reveal">
+
+        <span class="quote-mark" aria-hidden="true">&ldquo;</span>
+
+        <!-- CUSTOMIZE: Testimonial quote -->
+        <p class="testimonial-quote">
+          Working with this team completely transformed how we think about our online presence. They delivered beyond what we thought was possible, on time and with total professionalism.
+        </p>
+
+        <div class="testimonial-attribution">
+          <!-- CUSTOMIZE: Avatar initial, client name, company -->
+          <div class="attribution-avatar">J</div>
+          <div>
+            <div class="attribution-name">Jane Carter</div>
+            <div class="attribution-company">CEO, Acme Co.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ================================================
+       CONTACT
+  ================================================ -->
+  <section id="contact">
+    <div class="container">
+
+      <div class="reveal" style="margin-bottom: 48px;">
+        <span class="section-label">Get in Touch</span>
+        <!-- CUSTOMIZE: Contact section heading -->
+        <h2 class="section-heading">Start a Conversation</h2>
+        <p class="section-sub">Have a project in mind? We would love to hear about it. Drop us a message and we will get back to you within one business day.</p>
+      </div>
+
+      <div class="contact-grid">
+
+        <!-- Left: contact info -->
+        <div class="reveal">
+          <!-- CUSTOMIZE: Contact info items — address, email, phone -->
+          <ul class="contact-info-list">
+
+            <li class="contact-info-item">
+              <div class="contact-info-icon">📍</div>
+              <div class="contact-info-text">
+                <strong>Address</strong>
+                <span>123 Example Street, Your City, Country</span>
+              </div>
+            </li>
+
+            <li class="contact-info-item">
+              <div class="contact-info-icon">✉️</div>
+              <div class="contact-info-text">
+                <strong>Email</strong>
+                <!-- CUSTOMIZE: Your contact email -->
+                <span>hello@yourbrand.com</span>
+              </div>
+            </li>
+
+            <li class="contact-info-item">
+              <div class="contact-info-icon">📞</div>
+              <div class="contact-info-text">
+                <strong>Phone</strong>
+                <!-- CUSTOMIZE: Your phone number -->
+                <span>+1 (555) 000-0000</span>
+              </div>
+            </li>
+
+          </ul>
+        </div>
+
+        <!-- Right: contact form -->
+        <!-- Form submission requires a backend — hook up to your preferred service -->
+        <form class="contact-form reveal" id="contactForm">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="name">Your Name</label>
+              <input type="text" id="name" name="name" placeholder="Jane Smith" required />
+            </div>
+            <div class="form-group">
+              <label for="email">Email Address</label>
+              <input type="email" id="email" name="email" placeholder="jane@example.com" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="subject">Subject</label>
+            <input type="text" id="subject" name="subject" placeholder="Project enquiry" />
+          </div>
+
+          <div class="form-group">
+            <label for="message">Message</label>
+            <textarea id="message" name="message" placeholder="Tell us about your project..." required></textarea>
+          </div>
+
+          <!-- CUSTOMIZE: Button text -->
+          <button type="submit" class="btn-gradient">Send Message</button>
+
+        </form>
+
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ================================================
+       FOOTER
+  ================================================ -->
+  <footer id="footer">
+    <div class="container">
+      <div class="footer-main">
+
+        <!-- Brand column -->
+        <div class="footer-brand">
+          <a href="#" class="nav-logo">
+            <div class="logo-icon">Y</div>
+            <!-- CUSTOMIZE: Brand name -->
+            YourBrand
+          </a>
+          <!-- CUSTOMIZE: Footer tagline -->
+          <p class="footer-tagline">Building things that matter for businesses that care.</p>
+        </div>
+
+        <!-- Quick links -->
+        <div>
+          <div class="footer-col-title">Quick Links</div>
+          <ul class="footer-links">
+            <li><a href="#services">Services</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#work">Work</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div>
+
+        <!-- Social / connect -->
+        <div>
+          <div class="footer-col-title">Connect</div>
+          <div class="social-links">
+
+            <!-- CUSTOMIZE: Replace href="#" with your actual social profile URLs -->
+
+            <!-- Discord -->
+            <a href="#" class="social-link" aria-label="Discord">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+              </svg>
+            </a>
+
+            <!-- GitHub -->
+            <a href="#" class="social-link" aria-label="GitHub">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+              </svg>
+            </a>
+
+            <!-- LinkedIn -->
+            <a href="#" class="social-link" aria-label="LinkedIn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+              </svg>
+            </a>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer bottom bar -->
+      <div class="footer-bottom">
+        <!-- CUSTOMIZE: Copyright year and entity name -->
+        <span class="footer-copy">&copy; 2024 YourBrand. All rights reserved.</span>
+        <div class="footer-bottom-links">
+          <!-- CUSTOMIZE: Add links to privacy policy, terms, etc. -->
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+
+  <!-- ================================================
+       JAVASCRIPT
+  ================================================ -->
+  <script>
+    // -- Nav shadow on scroll --
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 10);
+    }, { passive: true });
+
+
+    // -- Hamburger toggle --
+    const hamburger   = document.getElementById('hamburger');
+    const mobileMenu  = document.getElementById('mobileMenu');
+    const mobileLinks = document.querySelectorAll('.mobile-link');
+
+    hamburger.addEventListener('click', () => {
+      hamburger.classList.toggle('open');
+      mobileMenu.classList.toggle('open');
+    });
+
+    // Close menu when a link is clicked
+    mobileLinks.forEach(link => {
+      link.addEventListener('click', () => {
+        hamburger.classList.remove('open');
+        mobileMenu.classList.remove('open');
+      });
+    });
+
+
+    // -- Scroll-reveal with IntersectionObserver --
+    const revealEls = document.querySelectorAll('.reveal, .reveal-stagger');
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.12,
+      rootMargin: '0px 0px -40px 0px'
+    });
+
+    revealEls.forEach(el => observer.observe(el));
+
+
+    // -- Contact form (placeholder handler) --
+    // CUSTOMIZE: Replace this with your actual form submission logic
+    // e.g., fetch('/api/contact', { method: 'POST', body: ... })
+    document.getElementById('contactForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('.btn-gradient');
+      btn.textContent = 'Message Sent ✓';
+      btn.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+      btn.disabled = true;
+      // Reset after 3s for demo purposes
+      setTimeout(() => {
+        btn.textContent = 'Send Message';
+        btn.style.background = '';
+        btn.disabled = false;
+        e.target.reset();
+      }, 3000);
+    });
+  </script>
+
+</body>
+</html>

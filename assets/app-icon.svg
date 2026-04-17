@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="a" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#58a6ff"/>
+      <stop offset="100%" stop-color="#bf91f3"/>
+    </linearGradient>
+    <linearGradient id="b" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#1f6feb"/>
+      <stop offset="100%" stop-color="#8957e5"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="120" fill="#0d1117"/>
+  <circle cx="128" cy="128" r="116" fill="url(#b)" opacity=".15"/>
+  <!-- House shape -->
+  <polygon points="128,30 220,110 210,110 210,210 46,210 46,110 36,110"
+           fill="url(#a)" opacity=".9"/>
+  <!-- Door -->
+  <rect x="105" y="150" width="46" height="60" rx="5" fill="#0d1117"/>
+  <!-- Windows -->
+  <rect x="70"  y="125" width="36" height="32" rx="4" fill="#0d1117" opacity=".8"/>
+  <rect x="150" y="125" width="36" height="32" rx="4" fill="#0d1117" opacity=".8"/>
+  <!-- Window glow -->
+  <rect x="73"  y="128" width="30" height="26" rx="3" fill="#58a6ff" opacity=".3"/>
+  <rect x="153" y="128" width="30" height="26" rx="3" fill="#bf91f3" opacity=".3"/>
+  <!-- Signal waves -->
+  <path d="M128 60 Q148 45 168 60" fill="none" stroke="#58a6ff" stroke-width="5" stroke-linecap="round" opacity=".6"/>
+  <path d="M128 60 Q108 45  88 60" fill="none" stroke="#58a6ff" stroke-width="5" stroke-linecap="round" opacity=".6"/>
+</svg>

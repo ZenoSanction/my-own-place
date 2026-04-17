@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- REPLACE: Update the title to match your server name -->
+  <title>YOUR SERVER NAME — DayZ</title>
+  <style>
+    /* =====================================================
+       RESET & BASE
+    ===================================================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #060908;
+      --bg-panel:   #080c07;
+      --bg-card:    #0c100b;
+      --bg-deep:    #050705;
+      --green:      #5a9e3a;
+      --green-dim:  #3d6e28;
+      --green-glow: rgba(90, 158, 58, 0.35);
+      --amber:      #c49a32;
+      --amber-dim:  #8c6e22;
+      --red:        #9e3232;
+      --text:       #a8c098;
+      --text-dim:   #6a8060;
+      --border:     rgba(90, 158, 58, 0.3);
+      --border-amber: rgba(196, 154, 50, 0.35);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      /* Scanline overlay */
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0,0,0,0.08) 2px,
+          rgba(0,0,0,0.08) 4px
+        );
+      background-attachment: fixed;
+    }
+
+    /* Scanline pseudo-layer over everything */
+    body::before {
+      content: '';
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,0) 0px,
+        rgba(255,255,255,0) 3px,
+        rgba(0,0,0,0.025) 3px,
+        rgba(0,0,0,0.025) 4px
+      );
+      z-index: 9999;
+    }
+
+    a { color: var(--green); text-decoration: none; }
+    a:hover { color: var(--amber); }
+
+    /* =====================================================
+       TOP HUD BAR
+    ===================================================== */
+    #hud-bar {
+      width: 100%;
+      background: var(--bg-panel);
+      border-bottom: 1px dashed var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 20px;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    #hud-bar .hud-left  { color: var(--green-dim); }
+    #hud-bar .hud-right { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+    #hud-bar .hud-center {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--green);
+      font-weight: bold;
+    }
+
+    /* Blinking status dot */
+    .blink-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--green);
+      animation: blink 1.4s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.15; }
+    }
+
+    /* =====================================================
+       CORNER CROSSHAIR DECORATION
+    ===================================================== */
+    .corner-tl, .corner-tr, .corner-bl, .corner-br {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-color: var(--green-dim);
+      border-style: solid;
+      opacity: 0.5;
+    }
+    .corner-tl { top: 8px;  left: 8px;  border-width: 1px 0 0 1px; }
+    .corner-tr { top: 8px;  right: 8px; border-width: 1px 1px 0 0; }
+    .corner-bl { bottom: 8px; left: 8px;  border-width: 0 0 1px 1px; }
+    .corner-br { bottom: 8px; right: 8px; border-width: 0 1px 1px 0; }
+
+    /* =====================================================
+       LAYOUT WRAPPER
+    ===================================================== */
+    .page-wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 16px 40px;
+    }
+
+    /* =====================================================
+       HERO SECTION
+    ===================================================== */
+    #hero {
+      position: relative;
+      text-align: center;
+      padding: 52px 24px 40px;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    /* REPLACE: Change "YOUR SERVER NAME" below */
+    #server-name {
+      font-size: clamp(26px, 5vw, 48px);
+      font-weight: bold;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--green);
+      text-shadow:
+        0 0 10px var(--green),
+        0 0 28px rgba(90, 158, 58, 0.55),
+        0 0 55px rgba(90, 158, 58, 0.2);
+      margin-bottom: 10px;
+    }
+
+    /* REPLACE: Change subtitle (map, mode, perspective) */
+    #server-subtitle {
+      font-size: 13px;
+      letter-spacing: 0.18em;
+      color: var(--amber-dim);
+      text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 26px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 1px dashed;
+      cursor: pointer;
+      background: transparent;
+      transition: background 0.15s, box-shadow 0.15s, color 0.15s;
+      text-decoration: none;
+    }
+
+    /* Copy IP — amber */
+    .btn-amber {
+      color: var(--amber);
+      border-color: var(--amber-dim);
+    }
+    .btn-amber:hover {
+      background: rgba(196,154,50,0.1);
+      box-shadow: 0 0 14px rgba(196,154,50,0.3);
+      color: var(--amber);
+    }
+
+    /* Discord — green */
+    .btn-green {
+      color: var(--green);
+      border-color: var(--green-dim);
+    }
+    .btn-green:hover {
+      background: rgba(90,158,58,0.12);
+      box-shadow: 0 0 14px var(--green-glow);
+      color: var(--green);
+    }
+
+    #server-ip-display {
+      font-size: 13px;
+      color: var(--amber);
+      letter-spacing: 0.12em;
+      opacity: 0.8;
+    }
+
+    /* =====================================================
+       STATS STRIP
+    ===================================================== */
+    #stats-strip {
+      display: flex;
+      gap: 12px;
+      padding: 20px 0;
+      border-bottom: 1px dashed var(--border);
+      flex-wrap: wrap;
+    }
+
+    .stat-box {
+      position: relative;
+      flex: 1 1 140px;
+      background: var(--bg-card);
+      border: 1px dashed var(--border);
+      padding: 14px 16px;
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--green-dim);
+      margin-bottom: 6px;
+    }
+
+    /* REPLACE: Update player count, map name, version */
+    .stat-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--amber);
+      letter-spacing: 0.06em;
+    }
+
+    /* =====================================================
+       TWO-COLUMN SECTION
+    ===================================================== */
+    #two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      padding: 20px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    @media (max-width: 620px) {
+      #two-col { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      position: relative;
+      background: var(--bg-card);
+      border: 1px dashed var(--border);
+      padding: 20px 18px 20px;
+    }
+
+    .panel-title {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed rgba(90,158,58,0.2);
+    }
+
+    /* RULES LIST */
+    /* REPLACE: Edit rules below as needed */
+    .rules-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .rules-list li {
+      display: flex;
+      gap: 10px;
+    }
+
+    .rule-num {
+      color: var(--green);
+      font-weight: bold;
+      min-width: 18px;
+      flex-shrink: 0;
+    }
+
+    .rule-text {
+      color: var(--amber);
+    }
+
+    /* FEATURES LIST */
+    /* REPLACE: Edit features below as needed */
+    .features-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .features-list li {
+      display: flex;
+      gap: 9px;
+      align-items: baseline;
+    }
+
+    .check-icon {
+      color: var(--green);
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .feature-text {
+      color: var(--text);
+    }
+
+    /* =====================================================
+       MODS SECTION
+    ===================================================== */
+    #mods-section {
+      position: relative;
+      padding: 20px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .section-heading {
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 14px;
+    }
+
+    /* REPLACE: Add, remove, or rename mod pills below */
+    .mods-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+
+    .mod-pill {
+      background: var(--bg-card);
+      border: 1px dashed var(--border-amber);
+      color: var(--amber);
+      padding: 6px 14px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      cursor: default;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+
+    .mod-pill:hover {
+      background: rgba(90,158,58,0.1);
+      color: var(--green);
+      box-shadow: 0 0 8px var(--green-glow);
+      border-color: var(--border);
+    }
+
+    /* =====================================================
+       FOOTER
+    ===================================================== */
+    #footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+    }
+
+    #footer a { color: var(--green-dim); }
+    #footer a:hover { color: var(--green); }
+
+    #footer .powered {
+      margin-top: 4px;
+      opacity: 0.4;
+      font-size: 10px;
+    }
+
+    /* =====================================================
+       COPY FEEDBACK TOAST
+    ===================================================== */
+    #copy-toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: var(--bg-panel);
+      border: 1px dashed var(--green);
+      color: var(--green);
+      padding: 8px 22px;
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 200;
+    }
+
+    #copy-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ====================================================
+       TOP HUD BAR
+       REPLACE: Left label if desired
+  ==================================================== -->
+  <div id="hud-bar">
+    <span class="hud-left">[DAYZ SERVER STATUS]</span>
+    <span class="hud-center">
+      <span class="blink-dot"></span>
+      SERVER ONLINE
+    </span>
+    <span class="hud-right" id="clock">--:--:-- UTC</span>
+  </div>
+
+  <div class="page-wrap">
+
+    <!-- ==================================================
+         HERO SECTION
+    ================================================== -->
+    <section id="hero">
+      <div class="corner-tl"></div>
+      <div class="corner-tr"></div>
+      <div class="corner-bl"></div>
+      <div class="corner-br"></div>
+
+      <!-- REPLACE: Your server's display name -->
+      <div id="server-name">YOUR SERVER NAME</div>
+
+      <!-- REPLACE: Mode | Map | Perspective -->
+      <div id="server-subtitle">Vanilla+ &nbsp;|&nbsp; Chernarus &nbsp;|&nbsp; 1PP</div>
+
+      <div class="btn-row">
+        <!-- REPLACE: Update IP inside the onclick and the data-ip attribute -->
+        <button
+          class="btn btn-amber"
+          id="copy-ip-btn"
+          data-ip="your.ip.here:2302"
+          onclick="copyIP()"
+        >📋 COPY IP</button>
+
+        <!-- REPLACE: Update href to your Discord invite link -->
+        <a
+          class="btn btn-green"
+          href="https://discord.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >💬 JOIN DISCORD</a>
+      </div>
+
+      <!-- REPLACE: IP address shown to visitors -->
+      <div id="server-ip-display">IP: your.ip.here:2302</div>
+    </section>
+
+    <!-- ==================================================
+         STATS STRIP
+         REPLACE: Player count, map, version
+    ================================================== -->
+    <div id="stats-strip">
+      <div class="stat-box">
+        <div class="corner-tl"></div>
+        <div class="corner-br"></div>
+        <div class="stat-label">Players</div>
+        <!-- REPLACE: Current / max players -->
+        <div class="stat-value">0 / 60</div>
+      </div>
+      <div class="stat-box">
+        <div class="corner-tl"></div>
+        <div class="corner-br"></div>
+        <div class="stat-label">Map</div>
+        <!-- REPLACE: Map name -->
+        <div class="stat-value">Chernarus</div>
+      </div>
+      <div class="stat-box">
+        <div class="corner-tl"></div>
+        <div class="corner-br"></div>
+        <div class="stat-label">Version</div>
+        <!-- REPLACE: DayZ game version -->
+        <div class="stat-value">1.25</div>
+      </div>
+    </div>
+
+    <!-- ==================================================
+         TWO-COLUMN: RULES + FEATURES
+    ================================================== -->
+    <div id="two-col">
+
+      <!-- SERVER RULES
+           REPLACE: Edit, add, or remove rules as needed -->
+      <div class="panel">
+        <div class="corner-tl"></div>
+        <div class="corner-tr"></div>
+        <div class="corner-bl"></div>
+        <div class="corner-br"></div>
+        <div class="panel-title">// Server Rules</div>
+        <ul class="rules-list">
+          <li>
+            <span class="rule-num">01.</span>
+            <span class="rule-text">No griefing or base camping</span>
+          </li>
+          <li>
+            <span class="rule-num">02.</span>
+            <span class="rule-text">Respect all players</span>
+          </li>
+          <li>
+            <span class="rule-num">03.</span>
+            <span class="rule-text">No hacking or exploiting</span>
+          </li>
+          <li>
+            <span class="rule-num">04.</span>
+            <span class="rule-text">KOS (Kill on Sight) is permitted</span>
+          </li>
+          <li>
+            <span class="rule-num">05.</span>
+            <span class="rule-text">Base raiding allowed weekends only</span>
+          </li>
+          <li>
+            <span class="rule-num">06.</span>
+            <span class="rule-text">Report cheaters to admins on Discord</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- SERVER FEATURES
+           REPLACE: Edit, add, or remove features as needed -->
+      <div class="panel">
+        <div class="corner-tl"></div>
+        <div class="corner-tr"></div>
+        <div class="corner-bl"></div>
+        <div class="corner-br"></div>
+        <div class="panel-title">// Server Features</div>
+        <ul class="features-list">
+          <li>
+            <span class="check-icon">[✓]</span>
+            <span class="feature-text">Custom loot tables</span>
+          </li>
+          <li>
+            <span class="check-icon">[✓]</span>
+            <span class="feature-text">Active admin team</span>
+          </li>
+          <li>
+            <span class="check-icon">[✓]</span>
+            <span class="feature-text">Weekly events</span>
+          </li>
+          <li>
+            <span class="check-icon">[✓]</span>
+            <span class="feature-text">Base building enabled</span>
+          </li>
+          <li>
+            <span class="check-icon">[✓]</span>
+            <span class="feature-text">Trader locations</span>
+          </li>
+          <li>
+            <span class="check-icon">[✓]</span>
+            <span class="feature-text">Discord integration</span>
+          </li>
+          <li>
+            <span class="check-icon">[✓]</span>
+            <span class="feature-text">Map with custom locations</span>
+          </li>
+          <li>
+            <span class="check-icon">[✓]</span>
+            <span class="feature-text">Friendly new-player zone</span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- ==================================================
+         MODS SECTION
+         REPLACE: Swap mod names or add/remove pills
+    ================================================== -->
+    <section id="mods-section">
+      <div class="corner-tl"></div>
+      <div class="corner-tr"></div>
+      <div class="section-heading">// Active Mods</div>
+      <div class="mods-grid">
+        <span class="mod-pill">CF</span>
+        <span class="mod-pill">VPPMap</span>
+        <span class="mod-pill">Community Online Tools</span>
+        <span class="mod-pill">Mass'sManyItemOverhaul</span>
+        <span class="mod-pill">BaseBuildingPlus</span>
+        <span class="mod-pill">Trader</span>
+      </div>
+    </section>
+
+    <!-- ==================================================
+         FOOTER
+         REPLACE: Discord link href
+    ================================================== -->
+    <footer id="footer">
+      <!-- REPLACE: Update Discord href -->
+      <a href="https://discord.com/" target="_blank" rel="noopener noreferrer">
+        💬 Join our Discord
+      </a>
+      <div class="powered">Powered by My Own Place</div>
+    </footer>
+
+  </div><!-- /.page-wrap -->
+
+  <!-- Copy feedback toast -->
+  <div id="copy-toast">COPIED!</div>
+
+  <!-- ==================================================
+       JAVASCRIPT
+  ================================================== -->
+  <script>
+    /* --------------------------------------------------
+       LIVE UTC CLOCK
+    -------------------------------------------------- */
+    function updateClock() {
+      const now  = new Date();
+      const hh   = String(now.getUTCHours()).padStart(2, '0');
+      const mm   = String(now.getUTCMinutes()).padStart(2, '0');
+      const ss   = String(now.getUTCSeconds()).padStart(2, '0');
+      document.getElementById('clock').textContent = `${hh}:${mm}:${ss} UTC`;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    /* --------------------------------------------------
+       COPY IP BUTTON
+       Reads data-ip from the button element so you only
+       need to change it in one place (the HTML attribute).
+    -------------------------------------------------- */
+    function copyIP() {
+      const btn  = document.getElementById('copy-ip-btn');
+      const ip   = btn.dataset.ip || 'your.ip.here:2302';
+      const toast = document.getElementById('copy-toast');
+
+      // Try modern clipboard API first, fall back to execCommand
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(ip).then(showCopied, showCopied);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = ip;
+        ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none;';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        showCopied();
+      }
+
+      function showCopied() {
+        const orig = btn.textContent;
+        btn.textContent = '✓ COPIED!';
+        toast.classList.add('show');
+        setTimeout(() => {
+          btn.textContent = orig;
+          toast.classList.remove('show');
+        }, 1800);
+      }
+    }
+  </script>
+
+</body>
+</html>
