@@ -1489,7 +1489,7 @@ if (window.api && window.api.updater) {
       'padding:.75rem 1.25rem;display:flex;align-items:center;gap:1rem',
       'box-shadow:0 4px 20px #00000066;font-size:.9rem'
     ].join(';');
-    banner.innerHTML = '🔄 Update v' + version + ' ready — '
+    banner.innerHTML = '🔄 Update v' + esc(version) + ' ready — '
       + '<button onclick="window.api.updater.install()" style="'
       + 'background:#fff;color:#1f6feb;border:none;border-radius:6px;'
       + 'padding:.3rem .8rem;font-weight:700;cursor:pointer">Restart & Update</button>'

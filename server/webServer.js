@@ -29,8 +29,30 @@ setInterval(pruneOldSessions, 15 * 60 * 1000);
 function verifyPBKDF2 (pw, stored) {
   if (!stored) return false;
   const [salt, hash] = stored.split(':');
-  return crypto.pbkdf2Sync(pw, salt, 100000, 64, 'sha512').toString('hex') === hash;
+  if (!salt || !hash) return false;
+  const a = crypto.pbkdf2Sync(pw, salt, 100000, 64, 'sha512');
+  const b = Buffer.from(hash, 'hex');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
+
+// ── Brute-force protection ────────────────────────────────────────────────────
+const loginAttempts = new Map(); // ip → { count, resetAt }
+const MAX_ATTEMPTS  = 10;
+const LOCKOUT_MS    = 15 * 60 * 1000; // 15 minutes
+
+function checkRateLimit (ip) {
+  const now = Date.now();
+  let rec   = loginAttempts.get(ip);
+  if (!rec || now > rec.resetAt) { rec = { count: 0, resetAt: now + LOCKOUT_MS }; }
+  return rec;
+}
+function recordFailedLogin (ip) {
+  const rec = checkRateLimit(ip);
+  rec.count++;
+  loginAttempts.set(ip, rec);
+}
+function clearLoginAttempts (ip) { loginAttempts.delete(ip); }
 
 // ── Login page HTML ───────────────────────────────────────────────────────────
 function loginPage (serverName, error = '') {
@@ -118,18 +140,28 @@ async function createWebServer (config, logPath) {
 
   // ── Login POST ────────────────────────────────────────────────────────────
   app.post('/__login', (req, res) => {
-    const ip = req.socket.remoteAddress || '?';
+    const ip  = req.socket.remoteAddress || '?';
+    const ua  = req.headers['user-agent'] || '';
+    const rec = checkRateLimit(ip);
+    if (rec.count >= MAX_ATTEMPTS) {
+      appendLog(logPath, { ip, type:'WEB', method:'POST', reqPath:'/__login',
+                           status:429, userAgent: ua, bytes:0 });
+      return res.status(429).send(loginPage(serverName,
+        'Too many failed attempts — try again in 15 minutes.'));
+    }
     if (verifyPBKDF2(req.body.password, password)) {
+      clearLoginAttempts(ip);
       const token = newToken();
       sessions.set(token, { created: Date.now() });
       res.setHeader('Set-Cookie',
         `__mop_session=${token}; Path=/; HttpOnly; SameSite=Strict`);
       appendLog(logPath, { ip, type:'WEB', method:'POST', reqPath:'/__login',
-                           status:302, userAgent: req.headers['user-agent'] || '', bytes:0 });
+                           status:302, userAgent: ua, bytes:0 });
       return res.redirect(302, req.query.next || '/');
     }
+    recordFailedLogin(ip);
     appendLog(logPath, { ip, type:'WEB', method:'POST', reqPath:'/__login',
-                         status:401, userAgent: req.headers['user-agent'] || '', bytes:0 });
+                         status:401, userAgent: ua, bytes:0 });
     res.status(401).send(loginPage(serverName, 'Incorrect password — please try again.'));
   });
 
@@ -142,8 +174,8 @@ async function createWebServer (config, logPath) {
   });
 
   // ── API: photos listing (used by gallery page) ───────────────────────────
-  // Public — no auth required; photo files are already publicly served as static files.
   app.get('/__api/photos', (req, res) => {
+    if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
     const photosDir = path.join(wwwRoot, 'photos');
     const imageExts = new Set(['.jpg','.jpeg','.png','.gif','.webp','.avif','.bmp','.svg']);
     try {

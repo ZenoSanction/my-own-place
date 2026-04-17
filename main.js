@@ -117,7 +117,10 @@ function verifyPassword (pw, stored) {
   if (!stored) return false;
   const [salt, hash] = stored.split(':');
   if (!salt || !hash) return false;
-  return crypto.pbkdf2Sync(pw, salt, 100000, 64, 'sha512').toString('hex') === hash;
+  const a = crypto.pbkdf2Sync(pw, salt, 100000, 64, 'sha512');
+  const b = Buffer.from(hash, 'hex');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 // ── Network ───────────────────────────────────────────────────────────────────
@@ -193,7 +196,7 @@ function createWindow () {
       preload:          path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration:  false,
-      sandbox:          false,       // required for contextBridge + ipcRenderer
+      sandbox:          true,        // safe with contextBridge since Electron 20+
     },
   };
   if (fs.existsSync(iconPath)) {
@@ -338,7 +341,11 @@ ipcMain.handle('win:close',     ()  => app.quit());
 ipcMain.handle('win:maximized', ()  => mainWindow?.isMaximized() ?? false);
 
 // ── Shell / dialogs ───────────────────────────────────────────────────────────
-ipcMain.handle('shell:open',    (_, url) => shell.openExternal(url));
+ipcMain.handle('shell:open',    (_, url) => {
+  // Only allow http/https — block file://, ms-msdt:, and other dangerous schemes
+  if (!/^https?:\/\//i.test(url)) return;
+  return shell.openExternal(url);
+});
 ipcMain.handle('shell:folder',  (_, p)   => shell.openPath(p));
 ipcMain.handle('dialog:folder', async () => {
   const r = await dialog.showOpenDialog(mainWindow, {
@@ -466,7 +473,11 @@ ipcMain.handle('fs:read', (_, rel) => {
   } catch (e) { return { error: e.message }; }
 });
 
+const MAX_WRITE_BYTES = 50 * 1024 * 1024; // 50 MB cap on writes and uploads
+
 ipcMain.handle('fs:write', (_, rel, content) => {
+  if (Buffer.byteLength(content, 'utf8') > MAX_WRITE_BYTES)
+    return { error: 'File too large (max 50 MB)' };
   const { wwwRoot } = loadConfig();
   try {
     const abs = safePath(wwwRoot, rel);
@@ -504,6 +515,8 @@ ipcMain.handle('fs:rename', (_, oldRel, newRel) => {
 });
 
 ipcMain.handle('fs:upload', (_, fileName, b64, targetDir) => {
+  if (b64.length > MAX_WRITE_BYTES * 1.4) // base64 is ~1.37× the raw size
+    return { error: 'Upload too large (max 50 MB)' };
   const { wwwRoot } = loadConfig();
   try {
     const rel = path.join(targetDir || '', fileName).replace(/\\/g, '/');
@@ -604,14 +617,18 @@ ipcMain.handle('templates:list', () => {
 });
 
 ipcMain.handle('templates:preview', (_, id) => {
-  const ip = path.join(getTemplateBase(), id, 'index.html');
-  try { return { content: fs.readFileSync(ip, 'utf8') }; }
+  const base = path.resolve(getTemplateBase());
+  const abs  = path.resolve(base, id);
+  if (!abs.startsWith(base)) return { error: 'Invalid template id' };
+  try { return { content: fs.readFileSync(path.join(abs, 'index.html'), 'utf8') }; }
   catch (e) { return { error: e.message }; }
 });
 
 ipcMain.handle('templates:apply', (_, id) => {
+  const base = path.resolve(getTemplateBase());
+  const src  = path.resolve(base, id);
+  if (!src.startsWith(base)) return { error: 'Invalid template id' };
   const { wwwRoot } = loadConfig();
-  const src = path.join(getTemplateBase(), id);
   try {
     cpDirSync(src, wwwRoot, ['meta.json', 'preview.png']);
     return { success: true };
