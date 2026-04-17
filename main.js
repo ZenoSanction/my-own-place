@@ -473,7 +473,7 @@ ipcMain.handle('fs:read', (_, rel) => {
   } catch (e) { return { error: e.message }; }
 });
 
-const MAX_WRITE_BYTES = 50 * 1024 * 1024; // 50 MB cap on writes and uploads
+const MAX_WRITE_BYTES = 4 * 1024 * 1024 * 1024; // 4 GB cap on writes and uploads
 
 ipcMain.handle('fs:write', (_, rel, content) => {
   if (Buffer.byteLength(content, 'utf8') > MAX_WRITE_BYTES)

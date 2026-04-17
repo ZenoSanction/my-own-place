@@ -461,6 +461,16 @@ async function renderDashboard () {
       <tr><td class="text-muted">Mode</td><td class="text-mono">Passive (PASV)</td></tr>
     </table>
     <p class="form-hint mt-1">Use FileZilla, WinSCP, or any FTP client with these credentials.</p>
+    <div class="card mt-2" style="background:#161b22;border-color:#30363d">
+      <div class="card-title" style="font-size:.8rem">💡 FTP Tips</div>
+      <ul style="font-size:.82rem;color:var(--text2);line-height:1.8;padding-left:1.2rem;margin:0">
+        <li>FTP has <strong style="color:var(--text)">no file size limit</strong> — use it for files over 4 GB</li>
+        <li>FTP streams files directly to disk — no memory spike like the in-app uploader</li>
+        <li>Best for large videos, backups, game files, and bulk transfers</li>
+        <li>Set protocol to <strong style="color:var(--text)">FTP</strong> and transfer mode to <strong style="color:var(--text)">Passive (PASV)</strong> in your client</li>
+        <li>Files land in your website root: <span class="text-mono" style="font-size:.78rem">${esc(S.config.wwwRoot || '')}</span></li>
+      </ul>
+    </div>
   </div>` : ''}
   `;
 
