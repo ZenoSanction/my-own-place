@@ -116,4 +116,25 @@ contextBridge.exposeInMainWorld('api', {
     onUpdateDownloaded: cb => ipcRenderer.on('update:downloaded', (_e, v) => cb(v)),
   },
 
+  // ── QR Code ─────────────────────────────────────────────────────────────────
+  qr: {
+    generate: url => invoke('qr:generate', url),
+  },
+
+  // ── Download counts ─────────────────────────────────────────────────────────
+  downloads: {
+    get:   ()  => invoke('downloads:get'),
+    clear: ()  => invoke('downloads:clear'),
+  },
+
+  // ── Visitor stats ────────────────────────────────────────────────────────────
+  visitors: {
+    stats: () => invoke('visitors:stats'),
+  },
+
+  // ── DDNS / Custom domain ─────────────────────────────────────────────────────
+  ddns: {
+    check: domain => invoke('ddns:check', domain),
+  },
+
 });

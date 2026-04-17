@@ -14,6 +14,62 @@ const cookie      = require('cookie');
 const mime        = require('mime-types');
 const { appendLog } = require('./logger');
 
+// ── Tracking state (module-level, persists while the process is alive) ────────
+let _dataDir    = null;  // set on first createWebServer() call
+let _dlCounts   = null;  // { relPath: number } — download counts
+let _visToday   = null;  // { date: 'YYYY-MM-DD', ips: Set }
+let _visAllTime = null;  // Set of all-time unique visitor IPs
+
+function _initTracking (dataDir) {
+  _dataDir = dataDir;
+  if (_dlCounts === null) {
+    try {
+      const f = path.join(dataDir, 'downloads.json');
+      _dlCounts = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : {};
+    } catch (_) { _dlCounts = {}; }
+  }
+  if (_visAllTime === null) {
+    try {
+      const f = path.join(dataDir, 'visitors.json');
+      const d = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : {};
+      _visAllTime = new Set(d.allTime || []);
+    } catch (_) { _visAllTime = new Set(); }
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  if (!_visToday || _visToday.date !== today)
+    _visToday = { date: today, ips: new Set() };
+}
+
+function _saveDownloads () {
+  if (!_dataDir || !_dlCounts) return;
+  try { fs.writeFileSync(path.join(_dataDir, 'downloads.json'), JSON.stringify(_dlCounts, null, 2)); } catch (_) {}
+}
+
+function _saveVisitors () {
+  if (!_dataDir || !_visAllTime) return;
+  try { fs.writeFileSync(path.join(_dataDir, 'visitors.json'),
+    JSON.stringify({ allTime: [..._visAllTime] })); } catch (_) {}
+}
+
+function _trackVisitor (ip) {
+  if (!_visToday || !_visAllTime) return;
+  const today = new Date().toISOString().slice(0, 10);
+  if (_visToday.date !== today) { _visToday.date = today; _visToday.ips = new Set(); }
+  const isNew = !_visAllTime.has(ip);
+  _visToday.ips.add(ip);
+  _visAllTime.add(ip);
+  if (isNew) _saveVisitors();
+}
+
+function getDownloads ()  { return _dlCounts  ? { ..._dlCounts }  : {}; }
+function clearDownloads () { _dlCounts = {}; _saveDownloads(); }
+function getVisitorStats () {
+  return {
+    today:   _visToday   ? _visToday.ips.size   : 0,
+    allTime: _visAllTime ? _visAllTime.size      : 0,
+  };
+}
+
 // In-memory session store  { token -> { created } }
 const sessions = new Map();
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
@@ -153,6 +209,18 @@ async function createWebServer (config, logPath) {
 
   app.disable('x-powered-by');
   app.use(express.urlencoded({ extended: false }));
+
+  // ── Initialise tracking ───────────────────────────────────────────────────
+  _initTracking(path.dirname(logPath));
+
+  // ── Visitor tracking middleware (all real page requests, before auth) ─────
+  // Internal /__* routes (login, API, badge) are excluded from the count.
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/__')) {
+      _trackVisitor(req.socket.remoteAddress || '?');
+    }
+    next();
+  });
 
   // ── Auth middleware ───────────────────────────────────────────────────────
   function isAuthenticated (req) {
@@ -382,6 +450,35 @@ async function createWebServer (config, logPath) {
     serveFile(res, filePath, stat, logEntry, logPath);
   });
 
+  // ── Visitor badge (public — no auth required) ────────────────────────────
+  // Embed on your site: <img src="http://YOUR_IP:PORT/__badge">
+  app.get('/__badge', (req, res) => {
+    const stats   = getVisitorStats();
+    const count   = stats.today;
+    const label   = 'visitors today';
+    const lw      = 90;
+    const vw      = Math.max(32, String(count).length * 9 + 18);
+    const tw      = lw + vw;
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'no-cache, no-store');
+    res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="${tw}" height="20">
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <rect rx="3" width="${tw}" height="20" fill="#555"/>
+  <rect rx="3" x="${lw}" width="${vw}" height="20" fill="#4c1"/>
+  <rect x="${lw}" width="4" height="20" fill="#4c1"/>
+  <rect rx="3" width="${tw}" height="20" fill="url(#s)"/>
+  <g fill="#fff" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+    <text x="${Math.round(lw/2)}" y="15" fill="#010101" fill-opacity=".3" text-anchor="middle">${escHtml(label)}</text>
+    <text x="${Math.round(lw/2)}" y="14" text-anchor="middle">${escHtml(label)}</text>
+    <text x="${lw + Math.round(vw/2)}" y="15" fill="#010101" fill-opacity=".3" text-anchor="middle">${count}</text>
+    <text x="${lw + Math.round(vw/2)}" y="14" text-anchor="middle">${count}</text>
+  </g>
+</svg>`);
+  });
+
   // ── Auth gate for all other routes ────────────────────────────────────────
   app.use((req, res, next) => {
     if (!isAuthenticated(req)) {
@@ -433,6 +530,14 @@ async function createWebServer (config, logPath) {
     const fileStat = fs.statSync(target);
     const logEntry = { ip, type:'WEB', method: req.method,
                        reqPath, status:200, userAgent: ua, bytes:0 };
+    // Track download count once the response finishes successfully
+    const dlKey = path.relative(wwwRoot, target).replace(/\\/g, '/');
+    res.on('finish', () => {
+      if (res.statusCode < 400 && _dlCounts) {
+        _dlCounts[dlKey] = (_dlCounts[dlKey] || 0) + 1;
+        _saveDownloads();
+      }
+    });
     serveFile(res, target, fileStat, logEntry, logPath);
   });
 
@@ -496,4 +601,4 @@ function fmtBytes (b) {
   return (b/1048576).toFixed(1) + ' MB';
 }
 
-module.exports = { createWebServer };
+module.exports = { createWebServer, getDownloads, clearDownloads, getVisitorStats };

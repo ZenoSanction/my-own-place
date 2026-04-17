@@ -234,9 +234,10 @@ async function renderDashboard () {
   // Fire both IPC calls simultaneously — they're independent, no point waiting
   // for log.stats() before asking for server.status().  timed() prevents either
   // call from hanging the dashboard if the main process stalls.
-  const [stats, st] = await Promise.all([
+  const [stats, st, visitors] = await Promise.all([
     timed(_api.log.stats(),      'log.stats()',      5000).catch(() => ({ today:0, total:0, ips:0 })),
     timed(_api.server.status(),  'server.status()',  5000).catch(() => ({ webRunning:false, ftpRunning:false })),
+    timed(_api.visitors.stats(), 'visitors.stats()', 5000).catch(() => ({ today:0, allTime:0 })),
   ]);
   refreshIndicator(st.webRunning || st.ftpRunning);
 
@@ -276,6 +277,7 @@ async function renderDashboard () {
           <input class="share-url" id="web-url" value="${lanUrl}" readonly>
           <button class="btn btn-sm" onclick="copyText('${lanUrl}')">Copy</button>
           <button class="btn btn-sm btn-primary" onclick="openBrowser('${lanUrl}')">Open</button>
+          <button class="btn btn-sm" onclick="showQR('${lanUrl}')">🔲 QR</button>
         </div>` : ''}
       </div>
     </div>
@@ -348,6 +350,27 @@ async function renderDashboard () {
         <div style="font-size:1.4rem;font-weight:700">${fmtBytes(stats.bytesFtp ?? 0)}</div>
       </div>
     </div>
+  </div>
+
+  <!-- Visitor stats -->
+  <div class="card mb-2">
+    <div class="card-title">👁 Visitors</div>
+    <div class="grid-2" style="gap:.75rem">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem 1rem">
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);margin-bottom:.3rem">Unique Visitors Today</div>
+        <div style="font-size:1.4rem;font-weight:700">${visitors.today ?? 0}</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem 1rem">
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);margin-bottom:.3rem">Unique Visitors All Time</div>
+        <div style="font-size:1.4rem;font-weight:700">${visitors.allTime ?? 0}</div>
+      </div>
+    </div>
+    ${st.webRunning ? `<p style="font-size:.75rem;color:var(--text2);margin-top:.65rem">
+      Embed a live badge on your site:
+      <code style="background:#21262d;padding:.15rem .5rem;border-radius:4px;font-size:.72rem;user-select:all">
+        &lt;img src="http://${esc(S.ip)}:${S.config.webPort}/__badge"&gt;
+      </code>
+    </p>` : ''}
   </div>
 
   <!-- Quick actions -->
@@ -587,7 +610,10 @@ async function toggleServer () {
 async function renderFiles (dirPath) {
   dirPath = dirPath || '';
   S.fmPath = dirPath;
-  const result = await _api.fs.list(dirPath);
+  const [result, downloads] = await Promise.all([
+    _api.fs.list(dirPath),
+    _api.downloads.get().catch(() => ({})),
+  ]);
 
   if (result.error) {
     document.getElementById('content').innerHTML =
@@ -616,6 +642,7 @@ async function renderFiles (dirPath) {
         <span class="fi-icon">${icon}</span>${esc(f.name)}
       </span></td>
       <td class="text-muted">${size}</td>
+      <td class="text-muted" style="text-align:center">${f.isDir ? '—' : (downloads[f.path] || 0)}</td>
       <td class="text-muted">${modDate}</td>
       <td>
         <div class="file-actions">
@@ -656,6 +683,7 @@ async function renderFiles (dirPath) {
       <thead><tr>
         <th>Name</th>
         <th style="width:80px">Size</th>
+        <th style="width:80px;text-align:center">Downloads</th>
         <th style="width:110px">Modified</th>
         <th style="width:110px">Actions</th>
       </tr></thead>
@@ -1716,6 +1744,27 @@ async function renderSettings () {
     </div>
   </div>
 
+  <!-- Custom Domain / DDNS -->
+  <div class="settings-section">
+    <h3>Custom Domain / DDNS</h3>
+    <p class="form-hint" style="margin-bottom:.9rem">
+      Have a free DDNS hostname from
+      <a onclick="openBrowser('https://www.duckdns.org')" style="cursor:pointer;color:#58a6ff">DuckDNS</a> or
+      <a onclick="openBrowser('https://www.noip.com')" style="cursor:pointer;color:#58a6ff">No-IP</a>?
+      Enter it here and it'll appear in share links instead of your raw IP.
+    </p>
+    <div class="form-group">
+      <label>Domain Name</label>
+      <div class="settings-row">
+        <input class="form-control" id="s-domain"
+               value="${esc(cfg.customDomain || '')}"
+               placeholder="e.g. mysite.duckdns.org" style="max-width:300px">
+        <button class="btn btn-sm" id="ddns-check-btn">🔍 Check</button>
+      </div>
+      <div id="ddns-status" class="form-hint" style="min-height:1.2rem"></div>
+    </div>
+  </div>
+
   <!-- FTP server -->
   <div class="settings-section">
     <h3>FTP Server</h3>
@@ -1841,6 +1890,40 @@ async function renderSettings () {
     this.textContent = show ? 'Hide' : 'Show';
   };
 
+  // DDNS domain check
+  document.getElementById('ddns-check-btn').onclick = async function () {
+    const domain   = document.getElementById('s-domain').value.trim();
+    const statusEl = document.getElementById('ddns-status');
+    if (!domain) {
+      statusEl.style.color = 'var(--text2)';
+      statusEl.textContent = 'Enter a domain name first.';
+      return;
+    }
+    statusEl.style.color = 'var(--text2)';
+    statusEl.textContent = '⏳ Checking…';
+    try {
+      const r = await _api.ddns.check(domain);
+      if (r.error) {
+        statusEl.style.color = '#f85149';
+        statusEl.textContent = '✗ Could not resolve: ' + r.error;
+      } else {
+        const pubIp = S.publicIp;
+        const match = pubIp && r.resolved && r.resolved.includes(pubIp);
+        if (match) {
+          statusEl.style.color = '#3fb950';
+          statusEl.innerHTML = '✓ <strong>' + esc(domain) + '</strong> resolves to your public IP (' + esc(r.resolved[0]) + ') — you\'re all set!';
+        } else {
+          statusEl.style.color = '#f0883e';
+          statusEl.innerHTML = '⚠ Resolves to <strong>' + esc((r.resolved || []).join(', ') || '?') + '</strong>'
+            + (pubIp ? ' — your public IP is <strong>' + esc(pubIp) + '</strong>' : ' — public IP unknown (start server first)');
+        }
+      }
+    } catch (e) {
+      statusEl.style.color = '#f85149';
+      statusEl.textContent = '✗ Check failed: ' + e.message;
+    }
+  };
+
   // Browse for www root folder
   document.getElementById('browse-wwwroot').onclick = async function () {
     const r = await _api.shell.pickFolder();
@@ -1862,6 +1945,7 @@ async function renderSettings () {
       scheduleStart:            (document.getElementById('s-sched-start').value || '08:00'),
       scheduleStop:             (document.getElementById('s-sched-stop').value  || '23:00'),
       wwwRoot:                   document.getElementById('s-wwwroot').value.trim(),
+      customDomain:              document.getElementById('s-domain').value.trim(),
       setupComplete:             true,
     };
     if (pw) updates.password = pw;
@@ -1958,6 +2042,32 @@ window.openBrowser = function (url) {
 window.openWwwFolder = async function () {
   var root = await _api.fs.wwwroot();
   _api.shell.openFolder(root);
+};
+
+window.showQR = async function (url) {
+  try {
+    const result = await _api.qr.generate(url);
+    if (result.error) { toast('QR error: ' + result.error, 'error'); return; }
+    showModal('QR Code', `
+      <div style="text-align:center;padding:.5rem 0">
+        <p style="color:var(--text2);font-size:.83rem;margin-bottom:1rem;word-break:break-all">${esc(url)}</p>
+        <img src="${result.dataUrl}"
+             style="border-radius:10px;border:8px solid #fff;display:block;margin:0 auto 1.25rem"
+             width="220" height="220" alt="QR code">
+        <p style="font-size:.76rem;color:var(--text2);margin-bottom:.75rem">
+          Scan with a phone to open your site instantly.
+        </p>
+        <div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap">
+          <button class="btn btn-primary" id="qr-copy-url-btn">📋 Copy URL</button>
+          <button class="btn" onclick="closeModal()">Close</button>
+        </div>
+      </div>`);
+    // Wire up copy after modal is in the DOM
+    var copyBtn = document.getElementById('qr-copy-url-btn');
+    if (copyBtn) copyBtn.onclick = function () { copyText(url); };
+  } catch (e) {
+    toast('QR code failed', 'error');
+  }
 };
 
 // ═════════════════════════════════════════════════════════════════════════════

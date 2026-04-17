@@ -20,7 +20,8 @@ const path   = require('path');
 const fs     = require('fs');
 const { autoUpdater } = require('electron-updater');
 const crypto = require('crypto');
-const os     = require('os');
+const os      = require('os');
+const QRCode  = require('qrcode');
 
 // ── Debug log ─────────────────────────────────────────────────────────────────
 // Written to the system temp folder (%TEMP%\myownplace-debug.log on Windows).
@@ -78,6 +79,7 @@ function getDefaults () {
     scheduleStart:            '08:00',
     scheduleStop:             '23:00',
     users:                    [],
+    customDomain:             '',
   };
 }
 
@@ -979,6 +981,67 @@ setInterval(() => {
   if (shouldBeOn  && !serverState.webRunning) _scheduleStart().catch(e => dbg(`Schedule start error: ${e.message}`));
   if (!shouldBeOn &&  serverState.webRunning) _scheduleStop() .catch(e => dbg(`Schedule stop error: ${e.message}`));
 }, 60 * 1000);
+
+// ── QR Code ───────────────────────────────────────────────────────────────────
+ipcMain.handle('qr:generate', async (_, url) => {
+  try {
+    const dataUrl = await QRCode.toDataURL(String(url), {
+      width: 220, margin: 2,
+      color: { dark: '#0d1117', light: '#ffffff' },
+    });
+    dbg(`qr:generate → generated for ${url}`);
+    return { dataUrl };
+  } catch (e) {
+    dbg(`qr:generate error: ${e.message}`);
+    return { error: e.message };
+  }
+});
+
+// ── Download tracking ─────────────────────────────────────────────────────────
+ipcMain.handle('downloads:get', () => {
+  try {
+    const { getDownloads } = require('./server/webServer');
+    return getDownloads();
+  } catch (_) { return {}; }
+});
+
+ipcMain.handle('downloads:clear', () => {
+  try {
+    const { clearDownloads } = require('./server/webServer');
+    clearDownloads();
+    dbg('downloads:clear → cleared');
+    return { success: true };
+  } catch (e) { return { error: e.message }; }
+});
+
+// ── Visitor stats ─────────────────────────────────────────────────────────────
+ipcMain.handle('visitors:stats', () => {
+  try {
+    const { getVisitorStats } = require('./server/webServer');
+    return getVisitorStats();
+  } catch (_) { return { today: 0, allTime: 0 }; }
+});
+
+// ── DDNS / Custom domain check ────────────────────────────────────────────────
+// Resolves the given hostname via DNS and returns the IP addresses found.
+// The renderer compares these against the user's cached public IP.
+ipcMain.handle('ddns:check', async (_, domain) => {
+  if (!domain || typeof domain !== 'string')
+    return { error: 'No domain provided', resolved: [] };
+  try {
+    const dns = require('dns').promises;
+    const resolved = await Promise.race([
+      dns.resolve4(domain.trim()),
+      new Promise((_, rej) =>
+        setTimeout(() => rej(new Error('DNS lookup timed out after 5 s')), 5000)),
+    ]);
+    dbg(`ddns:check ${domain} → ${resolved.join(', ')}`);
+    return { resolved, error: null };
+  } catch (e) {
+    dbg(`ddns:check ${domain} → error: ${e.message}`);
+    return { error: e.message, resolved: [] };
+  }
+});
 
 dbg('All IPC handlers registered');
 
