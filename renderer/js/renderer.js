@@ -1799,7 +1799,7 @@ async function renderSettings () {
   <div class="settings-section">
     <h3>About My Own Place</h3>
     <table style="font-size:.85rem;width:100%">
-      <tr><td class="text-muted" style="width:160px">Version</td><td>1.0.0</td></tr>
+      <tr><td class="text-muted" style="width:160px">Version</td><td>1.1.0</td></tr>
       <tr><td class="text-muted">Your Local IP</td><td class="text-mono">${S.ip}</td></tr>
       <tr><td class="text-muted">Data folder</td>
           <td class="text-mono text-small">AppData\\Roaming\\my-own-place</td></tr>

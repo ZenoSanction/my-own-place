@@ -1,6 +1,6 @@
 {
   "name": "my-own-place",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Your personal web and FTP server — share files with friends securely",
   "main": "main.js",
   "scripts": {
