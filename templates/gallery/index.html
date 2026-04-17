@@ -106,6 +106,12 @@
 </head>
 <body>
 
+<!-- ↩ Back / Forward navigation -->
+<div style="position:fixed;top:10px;left:10px;z-index:10000;display:flex;gap:6px;">
+  <button onclick="history.back()" title="Back" onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#30363d'" style="width:34px;height:34px;border-radius:8px;background:rgba(22,27,34,.92);border:1px solid #30363d;color:#c9d1d9;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">←</button>
+  <button onclick="history.forward()" title="Forward" onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#30363d'" style="width:34px;height:34px;border-radius:8px;background:rgba(22,27,34,.92);border:1px solid #30363d;color:#c9d1d9;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">→</button>
+</div>
+
 <header>
   <h1>📸 My Gallery</h1>
   <p>A collection of my favourite photos and images</p>

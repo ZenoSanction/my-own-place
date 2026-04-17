@@ -55,7 +55,9 @@ function recordFailedLogin (ip) {
 function clearLoginAttempts (ip) { loginAttempts.delete(ip); }
 
 // ── Login page HTML ───────────────────────────────────────────────────────────
-function loginPage (serverName, error = '') {
+function loginPage (serverName, error = '', showUsername = false) {
+  const inputStyle = 'width:100%;padding:.75rem 1rem;background:#0d1117;border:1px solid #30363d;' +
+                     'border-radius:8px;color:#c9d1d9;font-size:1rem;outline:none;transition:.2s';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -72,13 +74,15 @@ function loginPage (serverName, error = '') {
   .logo h1{font-size:1.6rem;background:linear-gradient(135deg,#58a6ff,#bf91f3);
             -webkit-background-clip:text;-webkit-text-fill-color:transparent}
   .logo p{color:#8b949e;font-size:.85rem;margin-top:.3rem}
-  label{display:block;font-size:.8rem;color:#8b949e;margin-bottom:.4rem;letter-spacing:.05em;text-transform:uppercase}
-  input[type=password]{width:100%;padding:.75rem 1rem;background:#0d1117;border:1px solid #30363d;
-                        border-radius:8px;color:#c9d1d9;font-size:1rem;outline:none;transition:.2s}
-  input[type=password]:focus{border-color:#58a6ff;box-shadow:0 0 0 3px #58a6ff22}
-  button{width:100%;padding:.8rem;margin-top:1.2rem;background:linear-gradient(135deg,#58a6ff,#4078c8);
-          border:none;border-radius:8px;color:#fff;font-size:1rem;font-weight:600;
-          cursor:pointer;transition:.2s;letter-spacing:.03em}
+  .fg{margin-bottom:1rem}
+  label{display:block;font-size:.8rem;color:#8b949e;margin-bottom:.4rem;
+        letter-spacing:.05em;text-transform:uppercase}
+  input{${inputStyle}}
+  input:focus{border-color:#58a6ff;box-shadow:0 0 0 3px #58a6ff22}
+  button{width:100%;padding:.8rem;margin-top:.5rem;
+         background:linear-gradient(135deg,#58a6ff,#4078c8);
+         border:none;border-radius:8px;color:#fff;font-size:1rem;font-weight:600;
+         cursor:pointer;transition:.2s;letter-spacing:.03em}
   button:hover{opacity:.9;transform:translateY(-1px)}
   .err{background:#f8514922;border:1px solid #f85149;border-radius:8px;
        padding:.6rem .9rem;color:#f85149;font-size:.85rem;margin-bottom:1rem;text-align:center}
@@ -88,12 +92,23 @@ function loginPage (serverName, error = '') {
 <div class="card">
   <div class="logo">
     <h1>${escHtml(serverName)}</h1>
-    <p>Enter the password to continue</p>
+    <p>${showUsername ? 'Sign in to continue' : 'Enter the password to continue'}</p>
   </div>
   ${error ? `<div class="err">${escHtml(error)}</div>` : ''}
   <form method="POST" action="/__login">
-    <label for="pw">Password</label>
-    <input type="password" id="pw" name="password" autofocus autocomplete="current-password">
+    ${showUsername ? `
+    <div class="fg">
+      <label for="usr">Username</label>
+      <input type="text" id="usr" name="username" autofocus autocomplete="username">
+    </div>
+    <div class="fg">
+      <label for="pw">Password</label>
+      <input type="password" id="pw" name="password" autocomplete="current-password">
+    </div>` : `
+    <div class="fg">
+      <label for="pw">Password</label>
+      <input type="password" id="pw" name="password" autofocus autocomplete="current-password">
+    </div>`}
     <button type="submit">Sign In</button>
   </form>
 </div>
@@ -125,18 +140,36 @@ function serveFile (res, filePath, stat, logEntry, logPath) {
 
 // ── Main factory ──────────────────────────────────────────────────────────────
 async function createWebServer (config, logPath) {
-  const app     = express();
-  const { webPort, wwwRoot, serverName, enablePasswordProtection, password } = config;
+  const app = express();
+  const { webPort, wwwRoot, serverName } = config;
+
+  // Read auth config fresh on every login so users/password added after server
+  // start are picked up immediately without a restart.
+  const configFile = path.join(path.dirname(logPath), 'config.json');
+  function getAuthConfig () {
+    try   { return JSON.parse(fs.readFileSync(configFile, 'utf8')); }
+    catch (_) { return config; }
+  }
 
   app.disable('x-powered-by');
   app.use(express.urlencoded({ extended: false }));
 
   // ── Auth middleware ───────────────────────────────────────────────────────
   function isAuthenticated (req) {
-    if (!enablePasswordProtection || !password) return true;
+    const ac = getAuthConfig();
+    if (!ac.enablePasswordProtection) return true;
+    const hasUsers = ac.users && ac.users.length > 0;
+    if (!hasUsers && !ac.password) return true;   // no credentials configured
     const cookies = cookie.parse(req.headers.cookie || '');
     return sessions.has(cookies.__mop_session);
   }
+
+  // ── Login GET (show form) ─────────────────────────────────────────────────
+  app.get('/__login', (req, res) => {
+    const ac       = getAuthConfig();
+    const hasUsers = !!(ac.users && ac.users.length > 0);
+    res.send(loginPage(serverName, '', hasUsers));
+  });
 
   // ── Login POST ────────────────────────────────────────────────────────────
   app.post('/__login', (req, res) => {
@@ -149,7 +182,23 @@ async function createWebServer (config, logPath) {
       return res.status(429).send(loginPage(serverName,
         'Too many failed attempts — try again in 15 minutes.'));
     }
-    if (verifyPBKDF2(req.body.password, password)) {
+
+    const ac       = getAuthConfig();
+    const hasUsers = !!(ac.users && ac.users.length > 0);
+    let   authed   = false;
+
+    if (hasUsers) {
+      // Multi-user mode: check username + password against the users array
+      const uname = (req.body.username || '').trim();
+      const pw    = req.body.password  || '';
+      const user  = ac.users.find(u => u.enabled && u.username === uname);
+      if (user && verifyPBKDF2(pw, user.password)) authed = true;
+    } else {
+      // Legacy single-password mode
+      if (verifyPBKDF2(req.body.password, ac.password)) authed = true;
+    }
+
+    if (authed) {
       clearLoginAttempts(ip);
       const token = newToken();
       sessions.set(token, { created: Date.now() });
@@ -159,10 +208,13 @@ async function createWebServer (config, logPath) {
                            status:302, userAgent: ua, bytes:0 });
       return res.redirect(302, req.query.next || '/');
     }
+
     recordFailedLogin(ip);
     appendLog(logPath, { ip, type:'WEB', method:'POST', reqPath:'/__login',
                          status:401, userAgent: ua, bytes:0 });
-    res.status(401).send(loginPage(serverName, 'Incorrect password — please try again.'));
+    res.status(401).send(loginPage(serverName,
+      hasUsers ? 'Incorrect username or password.' : 'Incorrect password — please try again.',
+      hasUsers));
   });
 
   // ── Logout ────────────────────────────────────────────────────────────────
@@ -171,6 +223,67 @@ async function createWebServer (config, logPath) {
     sessions.delete(cookies.__mop_session);
     res.setHeader('Set-Cookie', '__mop_session=; Path=/; Max-Age=0; HttpOnly');
     res.redirect(302, '/');
+  });
+
+  // ── API: guestbook ────────────────────────────────────────────────────────
+  const guestbookFile = path.join(path.dirname(logPath), 'guestbook.json');
+  const gbPostCooldown = new Map();  // ip → last-post timestamp
+
+  function loadGuestbook () {
+    try {
+      if (fs.existsSync(guestbookFile))
+        return JSON.parse(fs.readFileSync(guestbookFile, 'utf8'));
+    } catch (_) {}
+    return [];
+  }
+  function saveGuestbook (msgs) {
+    try { fs.writeFileSync(guestbookFile, JSON.stringify(msgs, null, 2)); } catch (_) {}
+  }
+
+  // GET — public: return messages without stored IPs
+  app.get('/__api/guestbook', (req, res) => {
+    const msgs = loadGuestbook().map(m => ({
+      id: m.id, name: m.name, message: m.message, timestamp: m.timestamp,
+    }));
+    res.json({ messages: msgs });
+  });
+
+  // POST — public (rate-limited to 1 per minute per IP)
+  app.post('/__api/guestbook', express.json(), (req, res) => {
+    const ip  = req.socket.remoteAddress || '?';
+    const now = Date.now();
+    const last = gbPostCooldown.get(ip) || 0;
+    if (now - last < 60000)
+      return res.status(429).json({ error: 'Please wait a minute before posting again.' });
+
+    const { name, message } = req.body || {};
+    if (!name || !message)
+      return res.status(400).json({ error: 'Name and message are required.' });
+    if (String(name).length > 50 || String(message).length > 500)
+      return res.status(400).json({ error: 'Name or message too long.' });
+
+    const entry = {
+      id:        crypto.randomBytes(8).toString('hex'),
+      name:      String(name).trim().slice(0, 50),
+      message:   String(message).trim().slice(0, 500),
+      timestamp: new Date().toISOString(),
+      ip,
+    };
+    const msgs = loadGuestbook();
+    msgs.push(entry);
+    saveGuestbook(msgs);
+    gbPostCooldown.set(ip, now);
+    appendLog(logPath, { ip, type: 'WEB', method: 'POST', reqPath: '/__api/guestbook',
+                         status: 201, userAgent: req.headers['user-agent'] || '', bytes: 0 });
+    res.status(201).json({ success: true });
+  });
+
+  // DELETE — requires session auth
+  app.delete('/__api/guestbook/:id', (req, res) => {
+    if (!isAuthenticated(req)) return res.status(401).json({ error: 'Unauthorized' });
+    const msgs = loadGuestbook().filter(m => m.id !== req.params.id);
+    saveGuestbook(msgs);
+    res.json({ success: true });
   });
 
   // ── API: photos listing (used by gallery page) ───────────────────────────
@@ -209,12 +322,75 @@ async function createWebServer (config, logPath) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
+  // ── Public share-link downloads ──────────────────────────────────────────
+  // Must be registered BEFORE the auth middleware so they work even when
+  // password protection is enabled.
+  const sharesFile = path.join(path.dirname(logPath), 'shares.json');
+
+  function getValidShare (token) {
+    try {
+      if (!fs.existsSync(sharesFile)) return null;
+      const list = JSON.parse(fs.readFileSync(sharesFile, 'utf8'));
+      const s    = list.find(x => x.token === token);
+      if (!s) return null;
+      if (s.expires && Date.now() > s.expires) return null;
+      return s;
+    } catch (_) { return null; }
+  }
+
+  app.get('/__share/:token', (req, res) => {
+    const { token } = req.params;
+    const ip = req.socket.remoteAddress || '?';
+    const ua = req.headers['user-agent'] || '';
+
+    // Reject tokens that don't look like our 40-char hex strings
+    if (!/^[a-f0-9]{40}$/.test(token)) {
+      return res.status(404).send(page404(serverName));
+    }
+
+    const share = getValidShare(token);
+    if (!share) {
+      appendLog(logPath, { ip, type: 'WEB', method: 'GET',
+                           reqPath: `/__share/${token}`, status: 404, userAgent: ua, bytes: 0 });
+      return res.status(404).send(page404(serverName));
+    }
+
+    const filePath = path.resolve(wwwRoot, share.filePath);
+
+    // Path traversal guard
+    if (!filePath.startsWith(path.resolve(wwwRoot))) {
+      return res.status(403).send('Forbidden');
+    }
+
+    if (!fs.existsSync(filePath)) {
+      appendLog(logPath, { ip, type: 'WEB', method: 'GET',
+                           reqPath: `/__share/${token}`, status: 404, userAgent: ua, bytes: 0 });
+      return res.status(404).send(page404(serverName));
+    }
+
+    const stat = fs.statSync(filePath);
+    if (stat.isDirectory()) {
+      return res.status(400).send('Directories cannot be shared as a download link.');
+    }
+
+    // Force download with the original filename
+    res.setHeader('Content-Disposition',
+      `attachment; filename="${path.basename(share.filePath)}"`);
+
+    const logEntry = { ip, type: 'WEB', method: 'GET',
+                       reqPath: `/__share/${token}`, status: 200, userAgent: ua, bytes: 0 };
+    serveFile(res, filePath, stat, logEntry, logPath);
+  });
+
   // ── Auth gate for all other routes ────────────────────────────────────────
   app.use((req, res, next) => {
     if (!isAuthenticated(req)) {
+      const ac       = getAuthConfig();
+      const hasUsers = !!(ac.users && ac.users.length > 0);
       if (req.method === 'GET')
         return res.redirect(302, `/__login?next=${encodeURIComponent(req.path)}`);
-      return res.status(401).send(loginPage(serverName, 'Session expired — please log in again.'));
+      return res.status(401).send(loginPage(serverName,
+        'Session expired — please log in again.', hasUsers));
     }
     next();
   });

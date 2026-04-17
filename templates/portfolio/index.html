@@ -602,6 +602,12 @@
 </head>
 <body>
 
+<!-- ↩ Back / Forward navigation -->
+<div style="position:fixed;top:10px;left:10px;z-index:10000;display:flex;gap:6px;">
+  <button onclick="history.back()" title="Back" onmouseover="this.style.borderColor='#7c6af7'" onmouseout="this.style.borderColor='#2a2a3a'" style="width:34px;height:34px;border-radius:8px;background:rgba(12,12,16,.92);border:1px solid #2a2a3a;color:#e8e8f0;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">←</button>
+  <button onclick="history.forward()" title="Forward" onmouseover="this.style.borderColor='#7c6af7'" onmouseout="this.style.borderColor='#2a2a3a'" style="width:34px;height:34px;border-radius:8px;background:rgba(12,12,16,.92);border:1px solid #2a2a3a;color:#e8e8f0;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">→</button>
+</div>
+
   <!-- Decorative orbs -->
   <div class="orb orb-1"></div>
   <div class="orb orb-2"></div>
@@ -838,7 +844,7 @@
         <span class="contact-value">you@example.com</span>
       </a>
 
-      <a href="https://discord.com" target="_blank" rel="noopener" class="contact-card fade-in fade-in-delay-2">
+      <a href="https://discord.com" rel="noopener" class="contact-card fade-in fade-in-delay-2">
         <div class="contact-icon">
           <!-- Discord icon -->
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -849,7 +855,7 @@
         <span class="contact-value">yourhandle</span>
       </a>
 
-      <a href="https://github.com" target="_blank" rel="noopener" class="contact-card fade-in fade-in-delay-3">
+      <a href="https://github.com" rel="noopener" class="contact-card fade-in fade-in-delay-3">
         <div class="contact-icon">
           <!-- GitHub icon -->
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

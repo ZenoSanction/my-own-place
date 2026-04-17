@@ -396,6 +396,12 @@
 </head>
 <body>
 
+<!-- ↩ Back / Forward navigation -->
+<div style="position:fixed;top:10px;left:10px;z-index:10000;display:flex;gap:6px;">
+  <button onclick="history.back()" title="Back" onmouseover="this.style.borderColor='#6dab4a'" onmouseout="this.style.borderColor='#3a5a2a'" style="width:34px;height:34px;border-radius:8px;background:rgba(8,11,7,.92);border:1px solid #3a5a2a;color:#b0c49a;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">←</button>
+  <button onclick="history.forward()" title="Forward" onmouseover="this.style.borderColor='#6dab4a'" onmouseout="this.style.borderColor='#3a5a2a'" style="width:34px;height:34px;border-radius:8px;background:rgba(8,11,7,.92);border:1px solid #3a5a2a;color:#b0c49a;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">→</button>
+</div>
+
   <!-- TOP BAR -->
   <header id="topbar">
     <span class="tb-net">[Chernarus Network]</span>
@@ -443,7 +449,7 @@
     <nav class="links-list">
 
       <!-- ✏️ Replace href with your real URL -->
-      <a class="link-item" href="https://discord.com/" target="_blank" rel="noopener">
+      <a class="link-item" href="https://discord.com/" rel="noopener">
         <span class="link-left">
           <span class="link-freq">[FREQ-01]</span>
           <span class="link-icon">🎮</span>
@@ -453,7 +459,7 @@
       </a>
 
       <!-- ✏️ Replace href with your real URL -->
-      <a class="link-item" href="https://store.steampowered.com/" target="_blank" rel="noopener">
+      <a class="link-item" href="https://store.steampowered.com/" rel="noopener">
         <span class="link-left">
           <span class="link-freq">[FREQ-02]</span>
           <span class="link-icon">🕹️</span>
@@ -463,7 +469,7 @@
       </a>
 
       <!-- ✏️ Replace href with your real URL -->
-      <a class="link-item" href="https://youtube.com/" target="_blank" rel="noopener">
+      <a class="link-item" href="https://youtube.com/" rel="noopener">
         <span class="link-left">
           <span class="link-freq">[FREQ-03]</span>
           <span class="link-icon">📺</span>
@@ -473,7 +479,7 @@
       </a>
 
       <!-- ✏️ Replace href with your real URL -->
-      <a class="link-item" href="https://x.com/" target="_blank" rel="noopener">
+      <a class="link-item" href="https://x.com/" rel="noopener">
         <span class="link-left">
           <span class="link-freq">[FREQ-04]</span>
           <span class="link-icon">📡</span>
@@ -482,7 +488,7 @@
         <span class="link-connect">→ CONNECT</span>
       </a>
 
-      <!-- ✏️ Local files route — no target="_blank" -->
+      <!-- ✏️ Local files route — no -->
       <a class="link-item" href="/files">
         <span class="link-left">
           <span class="link-freq">[FREQ-05]</span>

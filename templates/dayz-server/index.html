@@ -437,6 +437,12 @@
 </head>
 <body>
 
+<!-- ↩ Back / Forward navigation -->
+<div style="position:fixed;top:10px;left:10px;z-index:10000;display:flex;gap:6px;">
+  <button onclick="history.back()" title="Back" onmouseover="this.style.borderColor='#5a9e3a'" onmouseout="this.style.borderColor='#3d6e28'" style="width:34px;height:34px;border-radius:8px;background:rgba(6,9,8,.92);border:1px solid #3d6e28;color:#a8c098;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">←</button>
+  <button onclick="history.forward()" title="Forward" onmouseover="this.style.borderColor='#5a9e3a'" onmouseout="this.style.borderColor='#3d6e28'" style="width:34px;height:34px;border-radius:8px;background:rgba(6,9,8,.92);border:1px solid #3d6e28;color:#a8c098;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">→</button>
+</div>
+
   <!-- ====================================================
        TOP HUD BAR
        REPLACE: Left label if desired
@@ -480,8 +486,7 @@
         <a
           class="btn btn-green"
           href="https://discord.com/"
-          target="_blank"
-          rel="noopener noreferrer"
+                   rel="noopener noreferrer"
         >💬 JOIN DISCORD</a>
       </div>
 
@@ -628,7 +633,7 @@
     ================================================== -->
     <footer id="footer">
       <!-- REPLACE: Update Discord href -->
-      <a href="https://discord.com/" target="_blank" rel="noopener noreferrer">
+      <a href="https://discord.com/" rel="noopener noreferrer">
         💬 Join our Discord
       </a>
       <div class="powered">Powered by My Own Place</div>

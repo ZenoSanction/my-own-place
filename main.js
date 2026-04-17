@@ -74,6 +74,10 @@ function getDefaults () {
     enablePasswordProtection: true,
     maxLogEntries:            10000,
     setupComplete:            false,
+    scheduleEnabled:          false,
+    scheduleStart:            '08:00',
+    scheduleStop:             '23:00',
+    users:                    [],
   };
 }
 
@@ -187,8 +191,8 @@ function createWindow () {
   const winOpts  = {
     width:           1280,
     height:          820,
-    minWidth:        960,
-    minHeight:       620,
+    minWidth:        720,
+    minHeight:       560,
     frame:           false,          // we draw our own title bar
     backgroundColor: '#0d1117',      // avoids white flash on load
     show:            false,          // show only after content is ready
@@ -477,7 +481,7 @@ const MAX_WRITE_BYTES = 4 * 1024 * 1024 * 1024; // 4 GB cap on writes and upload
 
 ipcMain.handle('fs:write', (_, rel, content) => {
   if (Buffer.byteLength(content, 'utf8') > MAX_WRITE_BYTES)
-    return { error: 'File too large (max 50 MB)' };
+    return { error: 'File too large (max 4 GB)' };
   const { wwwRoot } = loadConfig();
   try {
     const abs = safePath(wwwRoot, rel);
@@ -516,7 +520,7 @@ ipcMain.handle('fs:rename', (_, oldRel, newRel) => {
 
 ipcMain.handle('fs:upload', (_, fileName, b64, targetDir) => {
   if (b64.length > MAX_WRITE_BYTES * 1.4) // base64 is ~1.37× the raw size
-    return { error: 'Upload too large (max 50 MB)' };
+    return { error: 'Upload too large (max 4 GB)' };
   const { wwwRoot } = loadConfig();
   try {
     const rel = path.join(targetDir || '', fileName).replace(/\\/g, '/');
@@ -528,6 +532,14 @@ ipcMain.handle('fs:upload', (_, fileName, b64, targetDir) => {
 });
 
 ipcMain.handle('fs:wwwroot', () => loadConfig().wwwRoot);
+
+// Returns raw file contents as a base64 string — used for image previews
+ipcMain.handle('fs:readbinary', (_, rel) => {
+  const { wwwRoot } = loadConfig();
+  try {
+    return { content: fs.readFileSync(safePath(wwwRoot, rel)).toString('base64') };
+  } catch (e) { return { error: e.message }; }
+});
 
 // ── Access Log ────────────────────────────────────────────────────────────────
 function parseCsvLine (line) {
@@ -581,18 +593,130 @@ ipcMain.handle('log:export', async () => {
 ipcMain.handle('log:stats', () => {
   try {
     const lp = getLogPath();
-    if (!fs.existsSync(lp)) return { total: 0, today: 0, ips: 0 };
-    const lines = fs.readFileSync(lp, 'utf8').trim().split('\n').slice(1).filter(Boolean);
-    const today = new Date().toISOString().slice(0, 10);
-    const ips   = new Set();
+    if (!fs.existsSync(lp)) return { total: 0, today: 0, ips: 0,
+                                      bytesTotal: 0, bytesToday: 0,
+                                      bytesWeb: 0,   bytesFtp: 0 };
+    const lines  = fs.readFileSync(lp, 'utf8').trim().split('\n').slice(1).filter(Boolean);
+    const today  = new Date().toISOString().slice(0, 10);
+    const ips    = new Set();
     let todayCount = 0;
+    let bytesTotal = 0, bytesToday = 0, bytesWeb = 0, bytesFtp = 0;
+
     for (const l of lines) {
       const p = parseCsvLine(l);
-      if (p[0]?.startsWith(today)) todayCount++;
+      // CSV columns: Timestamp, IP, Type, Method, Path, Status, UserAgent, Bytes
+      const bytes = Number(p[7]) || 0;
+      const type  = p[2] || '';
+      if (p[0]?.startsWith(today)) { todayCount++; bytesToday += bytes; }
       if (p[1]) ips.add(p[1]);
+      bytesTotal += bytes;
+      if (type === 'WEB') bytesWeb += bytes;
+      else if (type === 'FTP') bytesFtp += bytes;
     }
-    return { total: lines.length, today: todayCount, ips: ips.size };
-  } catch (_) { return { total: 0, today: 0, ips: 0 }; }
+    return {
+      total: lines.length, today: todayCount, ips: ips.size,
+      bytesTotal, bytesToday, bytesWeb, bytesFtp,
+    };
+  } catch (_) { return { total: 0, today: 0, ips: 0,
+                          bytesTotal: 0, bytesToday: 0,
+                          bytesWeb: 0, bytesFtp: 0 }; }
+});
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+ipcMain.handle('users:list', () => {
+  const { users = [] } = loadConfig();
+  // Never expose password hashes to the renderer
+  return users.map(({ id, username, enabled }) => ({ id, username, enabled }));
+});
+
+ipcMain.handle('users:add', (_, username, password) => {
+  username = (username || '').trim();
+  if (!username || !password) return { error: 'Username and password are required' };
+  const cfg   = loadConfig();
+  const users = cfg.users || [];
+  if (users.some(u => u.username === username))
+    return { error: `"${username}" already exists` };
+  const id = crypto.randomBytes(8).toString('hex');
+  users.push({ id, username, password: hashPassword(password), enabled: true });
+  saveConfig({ users });
+  dbg(`users:add → username=${username}`);
+  return { success: true };
+});
+
+ipcMain.handle('users:delete', (_, id) => {
+  const cfg   = loadConfig();
+  const users = (cfg.users || []).filter(u => u.id !== id);
+  saveConfig({ users });
+  dbg(`users:delete → id=${id}`);
+  return { success: true };
+});
+
+ipcMain.handle('users:update', (_, id, updates) => {
+  const cfg   = loadConfig();
+  const users = cfg.users || [];
+  const idx   = users.findIndex(u => u.id === id);
+  if (idx === -1) return { error: 'User not found' };
+  // Hash the password if a new one was supplied
+  if (updates.password) updates.password = hashPassword(updates.password);
+  users[idx] = { ...users[idx], ...updates };
+  saveConfig({ users });
+  dbg(`users:update → id=${id}`);
+  return { success: true };
+});
+
+// ── Shares ────────────────────────────────────────────────────────────────────
+function getSharesPath () { return path.join(getDataDir(), 'shares.json'); }
+
+function loadShares () {
+  try {
+    if (fs.existsSync(getSharesPath()))
+      return JSON.parse(fs.readFileSync(getSharesPath(), 'utf8'));
+  } catch (e) { dbg(`loadShares error: ${e.message}`); }
+  return [];
+}
+
+function saveShares (shares) {
+  try { fs.writeFileSync(getSharesPath(), JSON.stringify(shares, null, 2)); }
+  catch (e) { dbg(`saveShares error: ${e.message}`); }
+}
+
+ipcMain.handle('share:create', (_, filePath, expiryHours, label) => {
+  const token = crypto.randomBytes(20).toString('hex');
+  const now   = Date.now();
+  const share = {
+    token,
+    filePath,
+    label:   label || path.basename(filePath),
+    expires: expiryHours ? now + expiryHours * 3600000 : null,
+    created: now,
+  };
+  const shares = loadShares();
+  shares.push(share);
+  saveShares(shares);
+  const cfg = loadConfig();
+  const ip  = getLocalIP();
+  const url = `http://${ip}:${cfg.webPort}/__share/${token}`;
+  dbg(`share:create → token=${token}  file=${filePath}  expires=${share.expires || 'never'}`);
+  return { success: true, token, url };
+});
+
+ipcMain.handle('share:list', () => {
+  const now    = Date.now();
+  const shares = loadShares().filter(s => !s.expires || s.expires > now);
+  saveShares(shares);   // prune expired on every list call
+  const cfg = loadConfig();
+  const ip  = getLocalIP();
+  return shares.map(s => ({
+    ...s,
+    url: `http://${ip}:${cfg.webPort}/__share/${s.token}`,
+  }));
+});
+
+ipcMain.handle('share:delete', (_, token) => {
+  const shares = loadShares().filter(s => s.token !== token);
+  saveShares(shares);
+  dbg(`share:delete → token=${token}`);
+  return { success: true };
 });
 
 // ── Templates ─────────────────────────────────────────────────────────────────
@@ -645,6 +769,216 @@ function cpDirSync (src, dest, exclude = []) {
     else fs.copyFileSync(s, d);
   }
 }
+
+// ── Guestbook ─────────────────────────────────────────────────────────────────
+function getGuestbookPath () { return path.join(getDataDir(), 'guestbook.json'); }
+
+ipcMain.handle('guestbook:messages', () => {
+  try {
+    const gp = getGuestbookPath();
+    if (!fs.existsSync(gp)) return [];
+    return JSON.parse(fs.readFileSync(gp, 'utf8'));
+  } catch (_) { return []; }
+});
+
+ipcMain.handle('guestbook:delete', (_, id) => {
+  try {
+    const gp   = getGuestbookPath();
+    const msgs = fs.existsSync(gp) ? JSON.parse(fs.readFileSync(gp, 'utf8')) : [];
+    fs.writeFileSync(gp, JSON.stringify(msgs.filter(m => m.id !== id), null, 2));
+    return { success: true };
+  } catch (e) { return { error: e.message }; }
+});
+
+ipcMain.handle('guestbook:deploy', () => {
+  const { wwwRoot } = loadConfig();
+  try {
+    ensureWwwRoot(wwwRoot);
+    fs.writeFileSync(path.join(wwwRoot, 'guestbook.html'), GUESTBOOK_HTML);
+    return { success: true };
+  } catch (e) { return { error: e.message }; }
+});
+
+// The guestbook page template — deployed to wwwRoot on request
+const GUESTBOOK_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Guestbook</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-serif;
+       padding:2rem 1rem;max-width:680px;margin:auto}
+  h1{font-size:2.2rem;margin-bottom:.4rem;
+     background:linear-gradient(135deg,#58a6ff,#bf91f3);
+     -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .sub{color:#8b949e;margin-bottom:2rem;font-size:.9rem}
+  .form-card{background:#161b22;border:1px solid #30363d;border-radius:12px;
+             padding:1.5rem;margin-bottom:2rem}
+  .fg{margin-bottom:1rem}
+  label{display:block;font-size:.75rem;font-weight:600;color:#8b949e;
+        text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem}
+  input,textarea{width:100%;padding:.6rem .9rem;background:#0d1117;
+                  border:1px solid #30363d;border-radius:8px;color:#c9d1d9;
+                  font-size:.9rem;font-family:inherit;outline:none;
+                  transition:border-color .18s;resize:vertical}
+  input:focus,textarea:focus{border-color:#58a6ff;box-shadow:0 0 0 3px #58a6ff22}
+  .btn{display:inline-block;padding:.65rem 1.4rem;background:#1f6feb;border:none;
+       border-radius:8px;color:#fff;font-size:.9rem;font-weight:600;
+       cursor:pointer;transition:.18s}
+  .btn:hover{background:#58a6ff}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .msg-card{background:#161b22;border:1px solid #21262d;border-radius:10px;
+            padding:1rem 1.25rem;margin-bottom:1rem}
+  .msg-header{display:flex;justify-content:space-between;align-items:baseline;
+              flex-wrap:wrap;gap:.4rem;margin-bottom:.4rem}
+  .msg-name{font-weight:600;color:#58a6ff}
+  .msg-date{font-size:.75rem;color:#6e7681}
+  .msg-text{font-size:.88rem;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+  .empty{color:#6e7681;text-align:center;padding:2.5rem}
+  .err{color:#f85149;font-size:.83rem;margin-top:.5rem}
+  .ok{color:#3fb950;font-size:.83rem;margin-top:.5rem}
+  .count{font-size:.8rem;color:#8b949e;margin-bottom:.75rem}
+</style>
+</head>
+<body>
+<!-- ↩ Back to Home -->
+<a href="/" title="Back to Home" onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#30363d'" style="position:fixed;top:10px;left:10px;z-index:10000;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:8px;background:rgba(22,27,34,.92);border:1px solid #30363d;color:#c9d1d9;font-size:.85rem;font-weight:600;text-decoration:none;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">← Home</a>
+<h1>📖 Guestbook</h1>
+<p class="sub">Leave a message — no account needed.</p>
+
+<div class="form-card">
+  <div class="fg">
+    <label for="gb-name">Your Name</label>
+    <input type="text" id="gb-name" placeholder="e.g. Alice" maxlength="50"
+           autocomplete="name">
+  </div>
+  <div class="fg">
+    <label for="gb-msg">Message</label>
+    <textarea id="gb-msg" rows="4" placeholder="Write something nice…"
+              maxlength="500"></textarea>
+    <div style="text-align:right;font-size:.72rem;color:#6e7681;margin-top:.2rem">
+      <span id="char-count">0</span> / 500
+    </div>
+  </div>
+  <button class="btn" id="gb-submit">✉ Sign Guestbook</button>
+  <p id="gb-status"></p>
+</div>
+
+<div id="msg-list"><p class="empty">Loading messages…</p></div>
+
+<script>
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+async function loadMessages(){
+  try{
+    const r=await fetch('/__api/guestbook');
+    const{messages}=await r.json();
+    const list=document.getElementById('msg-list');
+    if(!messages||!messages.length){
+      list.innerHTML='<p class="empty">No messages yet — be the first to sign!</p>';return;
+    }
+    list.innerHTML='<p class="count">'+messages.length+' message'+(messages.length!==1?'s':'')+'</p>'+
+      messages.slice().reverse().map(m=>{
+        const d=new Date(m.timestamp).toLocaleString();
+        return'<div class="msg-card">'+
+          '<div class="msg-header">'+
+            '<span class="msg-name">'+esc(m.name)+'</span>'+
+            '<span class="msg-date">'+esc(d)+'</span>'+
+          '</div>'+
+          '<p class="msg-text">'+esc(m.message)+'</p>'+
+          '</div>';
+      }).join('');
+  }catch(e){
+    document.getElementById('msg-list').innerHTML='<p class="empty">Could not load messages.</p>';
+  }
+}
+
+document.getElementById('gb-msg').addEventListener('input',function(){
+  document.getElementById('char-count').textContent=this.value.length;
+});
+
+document.getElementById('gb-submit').addEventListener('click',async function(){
+  const name=document.getElementById('gb-name').value.trim();
+  const message=document.getElementById('gb-msg').value.trim();
+  const status=document.getElementById('gb-status');
+  if(!name||!message){status.className='err';status.textContent='Please fill in both fields.';return;}
+  this.disabled=true;status.textContent='';
+  try{
+    const r=await fetch('/__api/guestbook',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,message})
+    });
+    const data=await r.json();
+    if(data.success){
+      status.className='ok';status.textContent='✓ Message posted!';
+      document.getElementById('gb-name').value='';
+      document.getElementById('gb-msg').value='';
+      document.getElementById('char-count').textContent='0';
+      loadMessages();
+    }else{status.className='err';status.textContent=data.error||'Failed to post.';}
+  }catch(e){status.className='err';status.textContent='Network error.';}
+  this.disabled=false;
+});
+
+loadMessages();
+</script>
+</body>
+</html>`;
+
+// ── Scheduled start / stop ────────────────────────────────────────────────────
+// Fires every minute and auto-starts or auto-stops the server if a schedule
+// is configured.  The window is resolved correctly for overnight ranges too
+// (e.g. 22:00 → 06:00).
+
+function inScheduleWindow (start, stop, hhmm) {
+  if (start <= stop) return hhmm >= start && hhmm < stop;
+  return hhmm >= start || hhmm < stop;  // overnight window
+}
+
+async function _scheduleStart () {
+  const cfg = loadConfig();
+  ensureWwwRoot(cfg.wwwRoot);
+  if (!serverState.webRunning) {
+    try {
+      const { createWebServer } = require('./server/webServer');
+      webServerInst = await createWebServer(cfg, getLogPath());
+      serverState.webRunning = true;
+      dbg('Schedule: web server started');
+    } catch (e) { dbg(`Schedule: web start failed: ${e.message}`); }
+  }
+  if (cfg.enableFTP && !serverState.ftpRunning) {
+    try {
+      const { createFtpServer } = require('./server/ftpServer');
+      ftpServerInst = await createFtpServer(cfg, getLogPath());
+      serverState.ftpRunning = true;
+      dbg('Schedule: FTP server started');
+    } catch (e) { dbg(`Schedule: FTP start failed: ${e.message}`); }
+  }
+  if (mainWindow) mainWindow.webContents.send('server:autostarted');
+}
+
+async function _scheduleStop () {
+  try { if (webServerInst) { await webServerInst.stop(); webServerInst = null; } } catch (_) {}
+  try { if (ftpServerInst) { await ftpServerInst.stop(); ftpServerInst = null; } } catch (_) {}
+  serverState.webRunning = false;
+  serverState.ftpRunning = false;
+  dbg('Schedule: servers stopped');
+  if (mainWindow) mainWindow.webContents.send('server:autostopped');
+}
+
+setInterval(() => {
+  const cfg = loadConfig();
+  if (!cfg.scheduleEnabled) return;
+  const now  = new Date();
+  const hhmm = now.getHours().toString().padStart(2, '0') + ':' +
+               now.getMinutes().toString().padStart(2, '0');
+  const shouldBeOn = inScheduleWindow(cfg.scheduleStart, cfg.scheduleStop, hhmm);
+  dbg(`Schedule tick: ${hhmm}  shouldBeOn=${shouldBeOn}  webRunning=${serverState.webRunning}`);
+  if (shouldBeOn  && !serverState.webRunning) _scheduleStart().catch(e => dbg(`Schedule start error: ${e.message}`));
+  if (!shouldBeOn &&  serverState.webRunning) _scheduleStop() .catch(e => dbg(`Schedule stop error: ${e.message}`));
+}, 60 * 1000);
 
 dbg('All IPC handlers registered');
 

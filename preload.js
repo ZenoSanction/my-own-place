@@ -39,9 +39,11 @@ contextBridge.exposeInMainWorld('api', {
 
   // ── Servers ─────────────────────────────────────────────────────────────────
   server: {
-    start:  () => invoke('server:start'),
-    stop:   () => invoke('server:stop'),
-    status: () => invoke('server:status'),
+    start:       () => invoke('server:start'),
+    stop:        () => invoke('server:stop'),
+    status:      () => invoke('server:status'),
+    onAutoStart: cb => ipcRenderer.on('server:autostarted', () => cb()),
+    onAutoStop:  cb => ipcRenderer.on('server:autostopped', () => cb()),
   },
 
   // ── Network ─────────────────────────────────────────────────────────────────
@@ -58,8 +60,9 @@ contextBridge.exposeInMainWorld('api', {
     delete:  rel              => invoke('fs:delete', rel),
     mkdir:   rel              => invoke('fs:mkdir',  rel),
     rename:  (oldRel, newRel) => invoke('fs:rename', oldRel, newRel),
-    upload:  (name, b64, dir) => invoke('fs:upload', name, b64, dir),
-    wwwroot: ()               => invoke('fs:wwwroot'),
+    upload:     (name, b64, dir) => invoke('fs:upload',     name, b64, dir),
+    wwwroot:    ()               => invoke('fs:wwwroot'),
+    readbinary: rel              => invoke('fs:readbinary', rel),
   },
 
   // ── Access log ──────────────────────────────────────────────────────────────
@@ -82,6 +85,28 @@ contextBridge.exposeInMainWorld('api', {
     open:       url => invoke('shell:open',    url),
     openFolder: p   => invoke('shell:folder',  p),
     pickFolder: ()  => invoke('dialog:folder'),
+  },
+
+  // ── Guestbook ───────────────────────────────────────────────────────────────
+  guestbook: {
+    messages: ()   => invoke('guestbook:messages'),
+    delete:   id   => invoke('guestbook:delete', id),
+    deploy:   ()   => invoke('guestbook:deploy'),
+  },
+
+  // ── User accounts ───────────────────────────────────────────────────────────
+  users: {
+    list:   ()                    => invoke('users:list'),
+    add:    (username, password)  => invoke('users:add',    username, password),
+    delete: id                    => invoke('users:delete', id),
+    update: (id, updates)         => invoke('users:update', id, updates),
+  },
+
+  // ── Sharing ─────────────────────────────────────────────────────────────────
+  share: {
+    create: (filePath, expiryHours, label) => invoke('share:create', filePath, expiryHours, label),
+    list:   ()      => invoke('share:list'),
+    delete: token   => invoke('share:delete', token),
   },
 
   // ── Auto-updater ────────────────────────────────────────────────────────────

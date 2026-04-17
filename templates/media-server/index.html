@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Media Server</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2130;
+  --border:#30363d;--text:#c9d1d9;--text2:#8b949e;
+  --blue:#58a6ff;--blue-d:#1f6feb;--purple:#bf91f3;
+  --green:#3fb950;--red:#f85149;
+  --player-h:80px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);
+          font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden}
+/* ── Layout ── */
+#shell{display:flex;height:100vh}
+#sidebar{width:220px;min-width:220px;background:var(--bg2);
+         border-right:1px solid var(--border);
+         display:flex;flex-direction:column;padding:.75rem 0}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{padding:.9rem 1.5rem;border-bottom:1px solid var(--border);
+        display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#content-area{flex:1;overflow-y:auto;padding:1.5rem}
+#player-bar{height:var(--player-h);background:var(--bg2);border-top:1px solid var(--border);
+            padding:0 1.5rem;display:flex;align-items:center;gap:1.25rem;flex-shrink:0}
+/* ── Sidebar ── */
+.site-title{padding:.5rem 1.2rem 1rem;font-size:1.1rem;font-weight:700;
+            background:linear-gradient(135deg,var(--blue),var(--purple));
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-item{display:flex;align-items:center;gap:.7rem;padding:.55rem .9rem;
+          margin:1px .5rem;border-radius:8px;cursor:pointer;
+          color:var(--text2);font-size:.88rem;transition:.15s;user-select:none}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;fill:currentColor}
+.nav-item:hover{background:var(--border);color:var(--text)}
+.nav-item.active{background:var(--blue-d);color:#fff}
+.nav-footer{margin-top:auto;padding:.75rem 1rem;font-size:.72rem;
+            color:var(--text2);border-top:1px solid var(--border)}
+/* ── Top bar ── */
+.page-title{font-size:1.2rem;font-weight:700}
+#search-input{padding:.45rem .85rem;background:var(--bg3);border:1px solid var(--border);
+              border-radius:8px;color:var(--text);font-size:.85rem;outline:none;
+              width:260px;transition:.18s}
+#search-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #58a6ff22}
+/* ── Media grid ── */
+.section-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;
+               color:var(--text2);margin-bottom:.75rem;font-weight:600}
+.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:2rem}
+.media-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+            overflow:hidden;cursor:pointer;transition:.18s}
+.media-card:hover{border-color:var(--blue);transform:translateY(-2px);
+                  box-shadow:0 4px 20px #00000066}
+.media-thumb{height:130px;background:var(--bg3);display:flex;align-items:center;
+             justify-content:center;font-size:2.5rem;position:relative;overflow:hidden}
+.media-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.media-thumb .play-overlay{position:absolute;inset:0;background:#00000066;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:.15s;font-size:2rem}
+.media-card:hover .play-overlay{opacity:1}
+.media-info{padding:.65rem .8rem}
+.media-name{font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.media-meta{font-size:.72rem;color:var(--text2);margin-top:.15rem}
+/* ── Video player panel ── */
+#video-panel{display:none;flex-direction:column;height:100%}
+#video-panel.visible{display:flex}
+#video-wrap{flex:1;background:#000;display:flex;align-items:center;justify-content:center}
+#main-video{max-width:100%;max-height:100%;outline:none}
+.video-title{padding:.75rem 1.5rem;font-size:.95rem;font-weight:600;background:var(--bg2);
+             border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem}
+.back-btn{background:none;border:1px solid var(--border);border-radius:6px;
+          color:var(--text2);cursor:pointer;padding:.3rem .7rem;font-size:.82rem;transition:.15s}
+.back-btn:hover{border-color:var(--text2);color:var(--text)}
+/* ── Audio player bar ── */
+#audio-player{width:100%;display:none}
+#audio-player.visible{display:flex;align-items:center;gap:1rem;width:100%}
+.now-playing{min-width:0;flex:1}
+.now-playing .np-title{font-size:.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now-playing .np-file{font-size:.72rem;color:var(--text2);margin-top:.1rem}
+#audio-el{flex:2;min-width:0;accent-color:var(--blue)}
+/* ── Photo lightbox ── */
+#lightbox{display:none;position:fixed;inset:0;background:#000000cc;z-index:9999;
+          align-items:center;justify-content:center;cursor:pointer}
+#lightbox.open{display:flex}
+#lightbox img{max-width:92vw;max-height:92vh;border-radius:8px;object-fit:contain;cursor:default}
+/* ── Empty / error ── */
+.empty{text-align:center;padding:4rem;color:var(--text2);font-size:.9rem;line-height:2}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--blue);
+         border-radius:50%;animation:spin .6s linear infinite;display:inline-block;margin:auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+@media(max-width:700px){
+  #sidebar{width:54px;min-width:54px}
+  .site-title,.nav-item span,.nav-footer{display:none}
+  .nav-item{justify-content:center}
+  #search-input{width:160px}
+  .media-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+}
+</style>
+</head>
+<body>
+
+<!-- ↩ Back / Forward navigation -->
+<div style="position:fixed;top:10px;left:10px;z-index:10000;display:flex;gap:6px;">
+  <button onclick="history.back()" title="Back" onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#30363d'" style="width:34px;height:34px;border-radius:8px;background:rgba(22,27,34,.92);border:1px solid #30363d;color:#c9d1d9;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">←</button>
+  <button onclick="history.forward()" title="Forward" onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#30363d'" style="width:34px;height:34px;border-radius:8px;background:rgba(22,27,34,.92);border:1px solid #30363d;color:#c9d1d9;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">→</button>
+</div>
+
+<div id="shell">
+
+  <!-- Sidebar -->
+  <nav id="sidebar">
+    <div class="site-title">Media Server</div>
+    <div class="nav-item active" data-page="home" onclick="showPage('home',this)">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>Home</span>
+    </div>
+    <div class="nav-item" data-page="videos" onclick="showPage('videos',this)">
+      <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+      <span>Videos</span>
+    </div>
+    <div class="nav-item" data-page="music" onclick="showPage('music',this)">
+      <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+      <span>Music</span>
+    </div>
+    <div class="nav-item" data-page="photos" onclick="showPage('photos',this)">
+      <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+      <span>Photos</span>
+    </div>
+    <div class="nav-footer">My Own Place</div>
+  </nav>
+
+  <!-- Main area -->
+  <div id="main">
+    <div id="topbar">
+      <span class="page-title" id="page-title">Home</span>
+      <input id="search-input" type="search" placeholder="Search files…" oninput="filterCards(this.value)">
+    </div>
+
+    <div id="content-area">
+      <!-- Home / Video grid / Music list / Photo grid all go here -->
+      <div class="empty"><div class="spinner"></div><br>Loading…</div>
+    </div>
+
+    <!-- Persistent audio player bar -->
+    <div id="player-bar">
+      <div id="audio-player">
+        <div class="now-playing">
+          <div class="np-title" id="np-title">Nothing playing</div>
+          <div class="np-file" id="np-file"></div>
+        </div>
+        <audio id="audio-el" controls preload="none" style="flex:2;min-width:0;max-width:500px"></audio>
+      </div>
+      <span style="font-size:.72rem;color:var(--text2);margin-left:auto" id="player-hint">
+        Click a track to start playing
+      </span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Video panel (overlays content-area when a video is playing) -->
+<div id="video-panel">
+  <div class="video-title">
+    <button class="back-btn" onclick="closeVideo()">← Back</button>
+    <span id="video-title-text"></span>
+  </div>
+  <div id="video-wrap">
+    <video id="main-video" controls autoplay></video>
+  </div>
+</div>
+
+<!-- Photo lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+  <img id="lb-img" src="" alt="" onclick="event.stopPropagation()">
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+var allFiles = [];
+var currentPage = 'home';
+
+var VIDEO_EXT = new Set(['mp4','mov','mkv','avi','webm','m4v','ogv']);
+var AUDIO_EXT = new Set(['mp3','wav','flac','ogg','m4a','aac','opus','wma']);
+var IMAGE_EXT = new Set(['jpg','jpeg','png','gif','webp','avif','bmp','svg']);
+
+function ext(name){ return (name.split('.').pop()||'').toLowerCase(); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtBytes(b){
+  if(b<1024) return b+' B';
+  if(b<1048576) return (b/1024).toFixed(1)+' KB';
+  if(b<1073741824) return (b/1048576).toFixed(1)+' MB';
+  return (b/1073741824).toFixed(1)+' GB';
+}
+
+// ── Load file list from server ────────────────────────────────────────────────
+async function loadFiles(){
+  try{
+    const r = await fetch('/__api/files');
+    if(!r.ok){ setContent(errorHtml('Cannot load files (status '+r.status+')')); return; }
+    const data = await r.json();
+    allFiles = data.files || [];
+    renderPage(currentPage);
+  }catch(e){
+    setContent(errorHtml('Network error: '+e.message));
+  }
+}
+
+function errorHtml(msg){
+  return '<div class="empty">⚠️<br>'+esc(msg)+'<br><br>'+
+    'Make sure the server is running and you\'re logged in.</div>';
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showPage(page, el){
+  currentPage = page;
+  document.getElementById('page-title').textContent =
+    {home:'Home',videos:'Videos',music:'Music',photos:'Photos'}[page]||page;
+  document.querySelectorAll('.nav-item').forEach(function(li){
+    li.classList.toggle('active', li.dataset.page === page);
+  });
+  document.getElementById('search-input').value = '';
+  renderPage(page);
+}
+
+function renderPage(page){
+  var videos = allFiles.filter(function(f){ return VIDEO_EXT.has(ext(f.name)); });
+  var music  = allFiles.filter(function(f){ return AUDIO_EXT.has(ext(f.name)); });
+  var photos = allFiles.filter(function(f){ return IMAGE_EXT.has(ext(f.name)); });
+
+  if(page === 'home'){
+    var html = '';
+    if(videos.length){ html += sectionHtml('Videos', videos.slice(0,8), 'video'); }
+    if(music.length) { html += sectionHtml('Music',  music.slice(0,8),  'audio'); }
+    if(photos.length){ html += sectionHtml('Photos', photos.slice(0,8), 'photo'); }
+    if(!html) html = '<div class="empty">📂 No media files found.<br>Upload videos, music, or photos to your server\'s files folder.</div>';
+    setContent(html);
+  } else if(page === 'videos'){
+    setContent(videos.length
+      ? '<div class="section-label">All Videos ('+videos.length+')</div>'+gridHtml(videos,'video')
+      : '<div class="empty">🎬 No video files found.<br>Upload .mp4, .webm, or other video files to see them here.</div>');
+  } else if(page === 'music'){
+    setContent(music.length
+      ? '<div class="section-label">All Tracks ('+music.length+')</div>'+musicListHtml(music)
+      : '<div class="empty">🎵 No music files found.<br>Upload .mp3, .flac, .ogg or other audio files to see them here.</div>');
+  } else if(page === 'photos'){
+    setContent(photos.length
+      ? '<div class="section-label">All Photos ('+photos.length+')</div>'+gridHtml(photos,'photo')
+      : '<div class="empty">🖼 No photos found.<br>Upload images to the photos folder to see them here.</div>');
+  }
+}
+
+function setContent(html){
+  var ca = document.getElementById('content-area');
+  if(ca) ca.innerHTML = html;
+}
+
+// ── HTML builders ─────────────────────────────────────────────────────────────
+function sectionHtml(label, files, type){
+  return '<div class="section-label">'+esc(label)+'</div>'+
+    '<div class="media-grid">'+
+    files.map(function(f){ return cardHtml(f,type); }).join('')+
+    '</div>';
+}
+
+function gridHtml(files, type){
+  return '<div class="media-grid">'+
+    files.map(function(f){ return cardHtml(f,type); }).join('')+
+    '</div>';
+}
+
+function cardHtml(f, type){
+  var icon = type==='video'?'🎬':type==='audio'?'🎵':'🖼';
+  var thumb = type==='photo'
+    ? '<img src="/'+esc(f.path)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+    : '<span>'+icon+'</span>';
+  var action = type==='video'  ? 'playVideo(\''+esc(f.path)+'\',\''+esc(f.name)+'\')'
+             : type==='audio'  ? 'playAudio(\''+esc(f.path)+'\',\''+esc(f.name)+'\')'
+             :                   'openPhoto(\''+esc(f.path)+'\')';
+  return '<div class="media-card" onclick="'+action+'">' +
+    '<div class="media-thumb">'+thumb+'<div class="play-overlay">'+icon+'</div></div>'+
+    '<div class="media-info">'+
+      '<div class="media-name" title="'+esc(f.name)+'">'+esc(f.name)+'</div>'+
+      '<div class="media-meta">'+fmtBytes(f.size)+'</div>'+
+    '</div>'+
+    '</div>';
+}
+
+function musicListHtml(files){
+  return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">'+
+    files.map(function(f,i){
+      return '<div onclick="playAudio(\''+esc(f.path)+'\',\''+esc(f.name)+'\')" '+
+        'style="display:flex;align-items:center;gap:1rem;padding:.7rem 1rem;cursor:pointer;'+
+        'border-bottom:1px solid var(--border);transition:.12s" '+
+        'onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'+
+        '<span style="width:24px;text-align:center;color:var(--text2);font-size:.8rem;flex-shrink:0">'+(i+1)+'</span>'+
+        '<span style="font-size:1rem;flex-shrink:0">🎵</span>'+
+        '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.88rem">'+esc(f.name)+'</span>'+
+        '<span style="font-size:.75rem;color:var(--text2)">'+fmtBytes(f.size)+'</span>'+
+        '</div>';
+    }).join('')+
+    '</div>';
+}
+
+// ── Search / filter ───────────────────────────────────────────────────────────
+function filterCards(query){
+  query = query.toLowerCase();
+  document.querySelectorAll('.media-card,[onclick*="playAudio"]').forEach(function(el){
+    var name = el.querySelector('.media-name')||el;
+    var text = (name.textContent||'').toLowerCase();
+    el.style.display = (!query||text.includes(query)) ? '' : 'none';
+  });
+}
+
+// ── Video player ──────────────────────────────────────────────────────────────
+function playVideo(path, name){
+  var panel = document.getElementById('video-panel');
+  var video = document.getElementById('main-video');
+  var title = document.getElementById('video-title-text');
+  var main  = document.getElementById('main');
+  title.textContent = name;
+  video.src = '/'+path;
+  panel.classList.add('visible');
+  panel.style.cssText = 'display:flex;flex-direction:column;position:fixed;inset:0;z-index:100;background:var(--bg)';
+}
+
+function closeVideo(){
+  var video = document.getElementById('main-video');
+  video.pause(); video.src='';
+  document.getElementById('video-panel').style.display = 'none';
+}
+
+// ── Audio player ──────────────────────────────────────────────────────────────
+function playAudio(path, name){
+  var audio = document.getElementById('audio-el');
+  var hint  = document.getElementById('player-hint');
+  var player= document.getElementById('audio-player');
+  document.getElementById('np-title').textContent = name.replace(/\.[^.]+$/,'');
+  document.getElementById('np-file').textContent  = fmtBytes(allFiles.find(function(f){return f.path===path;})||{size:0}).size || '';
+  audio.src = '/'+path;
+  audio.play().catch(function(){});
+  player.classList.add('visible');
+  hint.style.display = 'none';
+}
+
+// ── Photo lightbox ────────────────────────────────────────────────────────────
+function openPhoto(path){
+  var lb = document.getElementById('lightbox');
+  document.getElementById('lb-img').src = '/'+path;
+  lb.classList.add('open');
+}
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closeLightbox(); closeVideo(); } });
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+loadFiles();
+</script>
+</body>
+</html>

@@ -217,6 +217,7 @@ async function navigate (page) {
       case 'editor':    await renderEditor();    break;
       case 'templates': await renderTemplates(); break;
       case 'log':       await renderLog();       break;
+      case 'guestbook': await renderGuestbook(); break;
       case 'settings':  await renderSettings();  break;
       default:
         setContent('<div class="page-header"><div class="page-title">Page not found</div></div>');
@@ -323,6 +324,29 @@ async function renderDashboard () {
       <div class="stat-label">Network IP</div>
       <div class="stat-value" style="font-size:1rem">${S.ip}</div>
       <div class="stat-sub">your LAN address</div>
+    </div>
+  </div>
+
+  <!-- Bandwidth stats -->
+  <div class="card mb-2">
+    <div class="card-title">📊 Bandwidth</div>
+    <div class="grid-4" style="gap:.75rem">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem 1rem">
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);margin-bottom:.3rem">Transferred Today</div>
+        <div style="font-size:1.4rem;font-weight:700">${fmtBytes(stats.bytesToday ?? 0)}</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem 1rem">
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);margin-bottom:.3rem">Transferred Total</div>
+        <div style="font-size:1.4rem;font-weight:700">${fmtBytes(stats.bytesTotal ?? 0)}</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem 1rem">
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);margin-bottom:.3rem">Web Transfer</div>
+        <div style="font-size:1.4rem;font-weight:700">${fmtBytes(stats.bytesWeb ?? 0)}</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem 1rem">
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);margin-bottom:.3rem">FTP Transfer</div>
+        <div style="font-size:1.4rem;font-weight:700">${fmtBytes(stats.bytesFtp ?? 0)}</div>
+      </div>
     </div>
   </div>
 
@@ -586,7 +610,7 @@ async function renderFiles (dirPath) {
     //            users when the preview iframe showed the rendered page.)
     const nameAttrs = f.isDir
       ? `onclick="navigate_files('${esc(f.path)}')" style="cursor:pointer"`
-      : `style="cursor:default"`;
+      : `onclick="previewFile('${esc(f.path)}','${esc(f.name)}')" style="cursor:pointer" title="Click to preview"`;
     return `<tr>
       <td><span class="fi-name" ${nameAttrs}>
         <span class="fi-icon">${icon}</span>${esc(f.name)}
@@ -596,6 +620,7 @@ async function renderFiles (dirPath) {
       <td>
         <div class="file-actions">
           ${!f.isDir ? `<button class="btn btn-sm" title="Edit" onclick="openEditorFile('${esc(f.path)}')">✏️</button>` : ''}
+          ${!f.isDir ? `<button class="btn btn-sm" title="Share" onclick="shareFile('${esc(f.path)}','${esc(f.name)}')">🔗</button>` : ''}
           <button class="btn btn-sm" title="Rename" onclick="renameItem('${esc(f.path)}','${esc(f.name)}')">🔤</button>
           <button class="btn btn-sm btn-danger" title="Delete" onclick="deleteItem('${esc(f.path)}','${esc(f.name)}',${f.isDir})">🗑</button>
         </div>
@@ -622,6 +647,7 @@ async function renderFiles (dirPath) {
     <button class="btn" onclick="promptNewFolder()">📁 New Folder</button>
     <button class="btn" onclick="promptNewFile()">📄 New File</button>
     <button class="btn" onclick="renderFiles('${esc(S.fmPath)}')">↻ Refresh</button>
+    <button class="btn" onclick="manageShares()">🔗 Shares</button>
   </div>
 
   <div class="card" id="fm-drop-target">
@@ -645,13 +671,52 @@ async function renderFiles (dirPath) {
   </div>
   `;
 
-  // Drag-and-drop
-  const dz = document.getElementById('drop-zone');
-  const dt = document.getElementById('fm-drop-target');
-  [dz, dt].forEach(function (el) {
-    el.addEventListener('dragover',  function (e) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; dz.classList.add('dragover'); });
-    el.addEventListener('dragleave', function ()  { dz.classList.remove('dragover'); });
-    el.addEventListener('drop',      function (e) { e.preventDefault(); dz.classList.remove('dragover'); handleUpload(e.dataTransfer.files); });
+  // ── Drag-and-drop: full-pane overlay ─────────────────────────────────────
+  // Uses relatedTarget instead of a depth counter so there is zero flicker
+  // when the drag moves over child elements inside the content area.
+  const contentEl = document.getElementById('content');
+  const dz        = document.getElementById('drop-zone');
+
+  // Build the overlay and append it *inside* contentEl so that
+  // contentEl.contains(relatedTarget) returns true for the overlay itself,
+  // preventing the dragleave from firing when the cursor moves onto it.
+  var overlay = document.createElement('div');
+  overlay.id  = 'drag-overlay';
+  overlay.innerHTML =
+    '<div style="pointer-events:none;text-align:center">' +
+    '<div style="font-size:3rem;margin-bottom:.6rem">⬆</div>' +
+    '<div style="font-size:1.1rem;font-weight:700">Drop files to upload</div>' +
+    '<div style="font-size:.82rem;margin-top:.3rem;opacity:.7">→ /' + esc(S.fmPath || 'root') + '</div>' +
+    '</div>';
+  contentEl.appendChild(overlay);
+
+  contentEl.addEventListener('dragenter', function (e) {
+    var types = e.dataTransfer ? Array.from(e.dataTransfer.types) : [];
+    if (!types.includes('Files')) return;
+    e.preventDefault();
+    overlay.classList.add('active');
+    dz.classList.add('dragover');
+  });
+  contentEl.addEventListener('dragleave', function (e) {
+    if (!contentEl.contains(e.relatedTarget)) {
+      overlay.classList.remove('active');
+      dz.classList.remove('dragover');
+    }
+  });
+  contentEl.addEventListener('dragover', function (e) { e.preventDefault(); });
+
+  overlay.addEventListener('dragover',  function (e) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  overlay.addEventListener('dragleave', function (e) {
+    if (!contentEl.contains(e.relatedTarget)) {
+      overlay.classList.remove('active');
+      dz.classList.remove('dragover');
+    }
+  });
+  overlay.addEventListener('drop', function (e) {
+    e.preventDefault();
+    overlay.classList.remove('active');
+    dz.classList.remove('dragover');
+    handleUpload(e.dataTransfer.files);
   });
 }
 
@@ -675,8 +740,25 @@ window.navigate_files = function (p) { renderFiles(p); };
 
 window.handleUpload = async function (files) {
   if (!files || !files.length) return;
-  var ok = 0;
+  var total = files.length;
+  var ok    = 0;
+
+  // Show a live progress toast for the duration of the upload
+  var progEl = document.createElement('div');
+  progEl.className  = 'toast info';
+  progEl.style.cssText = 'display:flex;align-items:center;gap:.6rem;min-width:260px';
+  var tc = document.getElementById('toast-container');
+  if (tc) tc.prepend(progEl);
+
+  function setProgress (i) {
+    progEl.innerHTML =
+      '<span class="spinner" style="width:14px;height:14px;flex-shrink:0"></span>' +
+      'Uploading ' + (i + 1) + '\u202f/\u202f' + total +
+      (total > 1 ? ' &mdash; ' + esc(files[i].name) : '&nbsp;&mdash;&nbsp;' + esc(files[i].name));
+  }
+
   for (var i = 0; i < files.length; i++) {
+    setProgress(i);
     var file = files[i];
     try {
       var b64 = await readFileAsBase64(file);
@@ -685,7 +767,13 @@ window.handleUpload = async function (files) {
       else toast('Upload failed: ' + r.error, 'error');
     } catch (e) { toast('Error: ' + e.message, 'error'); }
   }
-  if (ok) { toast(ok + ' file(s) uploaded', 'success'); renderFiles(S.fmPath); }
+
+  // Remove progress toast and show result
+  if (progEl.parentNode) progEl.parentNode.removeChild(progEl);
+  if (ok) {
+    toast(ok + ' file' + (ok > 1 ? 's' : '') + ' uploaded', 'success');
+    renderFiles(S.fmPath);
+  }
 };
 
 function readFileAsBase64 (file) {
@@ -772,6 +860,260 @@ window.doRename = async function (oldPath, oldName) {
   closeModal();
   if (r.success) { toast('Renamed', 'success'); renderFiles(S.fmPath); }
   else toast('Error: ' + r.error, 'error');
+};
+
+// ── User account management (called from Settings page) ───────────────────────
+window.promptAddUser = function () {
+  showModal('Add User', `
+    <div class="form-group">
+      <label>Username</label>
+      <input class="form-control" id="nu-name" placeholder="e.g. alice" autofocus
+             autocomplete="off" style="max-width:240px">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <div class="settings-row">
+        <input class="form-control" type="password" id="nu-pw"
+               placeholder="Choose a password" style="max-width:240px" autocomplete="new-password">
+        <button class="btn btn-sm" id="nu-pw-toggle">Show</button>
+      </div>
+    </div>
+    <button class="btn btn-primary w-full" onclick="doAddUser()">Add User</button>
+  `);
+  var btn = document.getElementById('nu-pw-toggle');
+  if (btn) btn.onclick = function () {
+    var inp = document.getElementById('nu-pw');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    btn.textContent = inp.type === 'password' ? 'Show' : 'Hide';
+  };
+};
+
+window.doAddUser = async function () {
+  var name = (document.getElementById('nu-name').value || '').trim();
+  var pw   = document.getElementById('nu-pw').value;
+  if (!name) return toast('Enter a username', 'warning');
+  if (!pw)   return toast('Enter a password', 'warning');
+  var r = await _api.users.add(name, pw);
+  closeModal();
+  if (r.success) { toast('User "' + name + '" added', 'success'); renderSettings(); }
+  else toast('Error: ' + r.error, 'error');
+};
+
+window.toggleUser = async function (id, enabled) {
+  await _api.users.update(id, { enabled });
+  toast(enabled ? 'User enabled' : 'User disabled', 'success');
+};
+
+window.changeUserPw = function (id, username) {
+  showModal('Change Password — ' + username, `
+    <div class="form-group">
+      <label>New Password</label>
+      <div class="settings-row">
+        <input class="form-control" type="password" id="cup-pw"
+               placeholder="New password" autofocus style="max-width:240px" autocomplete="new-password">
+        <button class="btn btn-sm" id="cup-pw-toggle">Show</button>
+      </div>
+    </div>
+    <button class="btn btn-primary w-full" onclick="doChangeUserPw('${esc(id)}')">Save Password</button>
+  `);
+  var btn = document.getElementById('cup-pw-toggle');
+  if (btn) btn.onclick = function () {
+    var inp = document.getElementById('cup-pw');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    btn.textContent = inp.type === 'password' ? 'Show' : 'Hide';
+  };
+};
+
+window.doChangeUserPw = async function (id) {
+  var pw = document.getElementById('cup-pw').value;
+  if (!pw) return toast('Enter a new password', 'warning');
+  var r = await _api.users.update(id, { password: pw });
+  closeModal();
+  if (r.success) toast('Password updated', 'success');
+  else toast('Error: ' + r.error, 'error');
+};
+
+window.deleteUser = function (id, username) {
+  showModal('Remove User', `
+    <p class="mb-2">Remove <strong>${esc(username)}</strong>?</p>
+    <p class="text-muted text-small mb-2">They will no longer be able to log into your site.</p>
+    <div class="flex gap-1">
+      <button class="btn btn-danger w-full" onclick="doDeleteUser('${esc(id)}')">Remove</button>
+      <button class="btn w-full" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+};
+
+window.doDeleteUser = async function (id) {
+  closeModal();
+  await _api.users.delete(id);
+  toast('User removed', 'success');
+  renderSettings();
+};
+
+// ── File preview ─────────────────────────────────────────────────────────────
+window.previewFile = async function (filePath, fileName) {
+  var ext       = (fileName.split('.').pop() || '').toLowerCase();
+  var imageExts = new Set(['jpg','jpeg','png','gif','webp','avif','bmp','svg']);
+  var textExts  = new Set(['html','htm','css','js','json','txt','md','xml','csv','ini','log']);
+
+  if (imageExts.has(ext)) {
+    // ── Image preview ──────────────────────────────────────────────────────
+    var ri = await _api.fs.readbinary(filePath);
+    if (ri.error) { toast('Cannot preview: ' + ri.error, 'error'); return; }
+    var mimeMap = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png',
+                    gif:'image/gif', webp:'image/webp', avif:'image/avif',
+                    bmp:'image/bmp', svg:'image/svg+xml' };
+    var dataUrl = 'data:' + (mimeMap[ext] || 'image/' + ext) + ';base64,' + ri.content;
+    showModal(fileName, `
+      <div style="text-align:center">
+        <img src="${dataUrl}"
+             style="max-width:100%;max-height:65vh;border-radius:8px;display:inline-block">
+      </div>
+      <div class="flex gap-1 mt-2">
+        <button class="btn" onclick="shareFile('${esc(filePath)}','${esc(fileName)}');closeModal()">🔗 Share</button>
+        <button class="btn" onclick="closeModal()">Close</button>
+      </div>
+    `);
+
+  } else if (textExts.has(ext)) {
+    // ── Text / code / HTML preview ─────────────────────────────────────────
+    var rt = await _api.fs.read(filePath);
+    if (rt.error) { toast('Cannot preview: ' + rt.error, 'error'); return; }
+    var isHtml = (ext === 'html' || ext === 'htm');
+    var body   = isHtml
+      ? `<iframe srcdoc="${esc(rt.content)}"
+                 style="width:100%;height:60vh;border:none;border-radius:8px;background:#fff"
+                 sandbox="allow-scripts allow-same-origin"></iframe>`
+      : `<pre style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+                     padding:1rem;overflow:auto;max-height:60vh;
+                     font-size:.78rem;line-height:1.55;color:var(--text);
+                     white-space:pre-wrap;word-break:break-all">${esc(rt.content.slice(0, 30000))}</pre>`;
+    showModal(fileName, body + `
+      <div class="flex gap-1 mt-2">
+        <button class="btn btn-primary" onclick="openEditorFile('${esc(filePath)}');closeModal()">✏️ Edit</button>
+        <button class="btn" onclick="shareFile('${esc(filePath)}','${esc(fileName)}');closeModal()">🔗 Share</button>
+        <button class="btn" onclick="closeModal()">Close</button>
+      </div>
+    `);
+
+  } else {
+    // ── Generic file info panel ────────────────────────────────────────────
+    showModal(fileName, `
+      <div style="text-align:center;padding:1.25rem 0">
+        <div style="font-size:3rem;margin-bottom:.6rem">${fileIcon(fileName)}</div>
+        <p style="font-weight:600;margin-bottom:.4rem">${esc(fileName)}</p>
+        <p class="text-muted text-small">No preview available for <code>.${esc(ext)}</code> files</p>
+      </div>
+      <div class="flex gap-1 mt-2">
+        <button class="btn btn-primary" onclick="shareFile('${esc(filePath)}','${esc(fileName)}');closeModal()">🔗 Share</button>
+        <button class="btn" onclick="closeModal()">Close</button>
+      </div>
+    `);
+  }
+};
+
+// ── Share links ───────────────────────────────────────────────────────────────
+window.shareFile = function (filePath, fileName) {
+  showModal('Share File', `
+    <p style="margin-bottom:.75rem">Create a public download link for
+      <strong>${esc(fileName)}</strong>.</p>
+    <p class="text-muted text-small" style="margin-bottom:1rem">
+      The link works for anyone — no password required. Only share with trusted people.
+    </p>
+    <div class="form-group">
+      <label>Link Expiry</label>
+      <select class="form-control" id="share-expiry" style="max-width:220px">
+        <option value="">Never expires</option>
+        <option value="1">1 hour</option>
+        <option value="24">24 hours</option>
+        <option value="168">7 days</option>
+        <option value="720">30 days</option>
+      </select>
+    </div>
+    <button class="btn btn-primary w-full" onclick="doCreateShare('${esc(filePath)}','${esc(fileName)}')">
+      🔗 Generate Share Link
+    </button>
+  `);
+};
+
+window.doCreateShare = async function (filePath, fileName) {
+  var expiryVal  = document.getElementById('share-expiry').value;
+  var expiryHrs  = expiryVal ? parseInt(expiryVal, 10) : null;
+  var r          = await _api.share.create(filePath, expiryHrs, fileName);
+  if (!r.success) { toast('Failed: ' + (r.error || 'unknown error'), 'error'); return; }
+
+  var expiryText = expiryVal
+    ? '⏱ Expires in ' + expiryVal + ' hour' + (parseInt(expiryVal, 10) > 1 ? 's' : '')
+    : '✓ Never expires';
+
+  showModal('Share Link Ready', `
+    <p style="margin-bottom:.5rem">
+      Download link for <strong>${esc(fileName)}</strong>:
+    </p>
+    <p class="text-muted text-small" style="margin-bottom:.75rem">${esc(expiryText)}</p>
+    <div class="share-bar" style="margin-bottom:1rem">
+      <input class="share-url" id="share-link-val" value="${esc(r.url)}" readonly
+             style="font-size:.8rem">
+      <button class="btn btn-sm"
+              onclick="copyText(document.getElementById('share-link-val').value)">Copy</button>
+    </div>
+    <p class="text-muted text-small" style="margin-bottom:1rem">
+      Anyone with this link can download the file directly from your server.
+    </p>
+    <div class="flex gap-1">
+      <button class="btn w-full" onclick="closeModal()">Done</button>
+      <button class="btn w-full" onclick="manageShares()">Manage All Shares</button>
+    </div>
+  `);
+};
+
+window.manageShares = async function () {
+  var shares = await _api.share.list();
+  var rows = shares.length
+    ? shares.map(function (s) {
+        var exp  = s.expires ? new Date(s.expires).toLocaleString() : '—';
+        var cre  = new Date(s.created).toLocaleDateString();
+        return '<tr>' +
+          '<td style="padding:.45rem .5rem">' + esc(s.label) + '</td>' +
+          '<td class="text-muted text-small" style="padding:.45rem .5rem">' + esc(cre) + '</td>' +
+          '<td class="text-muted text-small" style="padding:.45rem .5rem">' + esc(exp) + '</td>' +
+          '<td style="padding:.45rem .5rem"><div class="flex gap-1">' +
+            '<button class="btn btn-sm" onclick="copyShareUrl(\'' + esc(s.url) + '\')">📋</button>' +
+            '<button class="btn btn-sm btn-danger" onclick="doDeleteShare(\'' + esc(s.token) + '\')">🗑</button>' +
+          '</div></td>' +
+          '</tr>';
+      }).join('')
+    : '<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--text2)">' +
+      '📭 No active share links</td></tr>';
+
+  showModal('Manage Share Links', `
+    <table style="width:100%;border-collapse:collapse;font-size:.84rem;margin-bottom:.75rem">
+      <thead><tr>
+        <th style="text-align:left;padding:.35rem .5rem;color:var(--text2);font-size:.72rem;
+                   text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)">File</th>
+        <th style="text-align:left;padding:.35rem .5rem;color:var(--text2);font-size:.72rem;
+                   text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)">Created</th>
+        <th style="text-align:left;padding:.35rem .5rem;color:var(--text2);font-size:.72rem;
+                   text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)">Expires</th>
+        <th style="border-bottom:1px solid var(--border)"></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p class="text-muted text-small">
+      ⚠ Share links bypass password protection. Delete any you no longer need.
+    </p>
+  `);
+};
+
+window.copyShareUrl = function (url) {
+  navigator.clipboard.writeText(url).then(function () { toast('Link copied!', 'success'); });
+};
+
+window.doDeleteShare = async function (token) {
+  await _api.share.delete(token);
+  toast('Share link deleted', 'success');
+  manageShares();   // refresh the modal in place
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1188,16 +1530,86 @@ async function renderLog () {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
+// GUESTBOOK
+// ═════════════════════════════════════════════════════════════════════════════
+async function renderGuestbook () {
+  const messages = await _api.guestbook.messages();
+
+  const rows = messages.length
+    ? messages.slice().reverse().map(function (m) {
+        var d = new Date(m.timestamp).toLocaleString();
+        return '<tr>' +
+          '<td style="padding:.5rem .6rem;max-width:120px;overflow:hidden;text-overflow:ellipsis">' + esc(m.name) + '</td>' +
+          '<td style="padding:.5rem .6rem;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:pre-wrap">' + esc(m.message) + '</td>' +
+          '<td class="text-muted text-small" style="padding:.5rem .6rem;white-space:nowrap">' + esc(d) + '</td>' +
+          '<td style="padding:.5rem .6rem">' +
+            '<button class="btn btn-sm btn-danger" onclick="gbDelete(\'' + esc(m.id) + '\')">🗑</button>' +
+          '</td>' +
+          '</tr>';
+      }).join('')
+    : '<tr><td colspan="4" class="log-empty">📭 No messages yet</td></tr>';
+
+  document.getElementById('content').innerHTML = `
+  <div class="page-header">
+    <div>
+      <div class="page-title">Guestbook</div>
+      <div class="page-subtitle">Messages left by visitors — ${messages.length} total</div>
+    </div>
+    <div class="flex gap-1">
+      <button class="btn btn-primary" onclick="gbDeploy()">📄 Add to Site</button>
+      <button class="btn" onclick="renderGuestbook()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="card mb-2" style="background:var(--green-bg);border-color:var(--green)">
+    <p style="font-size:.84rem;color:var(--green)">
+      ✅ The <strong>Add to Site</strong> button copies <code>guestbook.html</code> to your website root
+      so visitors can leave messages. Make sure your server is running and link to
+      <code>/guestbook.html</code> from your homepage.
+    </p>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="overflow-x:auto">
+      <table class="file-table">
+        <thead><tr>
+          <th>Name</th>
+          <th>Message</th>
+          <th style="width:160px">Date</th>
+          <th style="width:60px"></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>
+  `;
+}
+
+window.gbDelete = async function (id) {
+  if (!confirm('Delete this message?')) return;
+  var r = await _api.guestbook.delete(id);
+  if (r.success) { toast('Message deleted', 'success'); renderGuestbook(); }
+  else toast('Error: ' + r.error, 'error');
+};
+
+window.gbDeploy = async function () {
+  var r = await _api.guestbook.deploy();
+  if (r.success) toast('guestbook.html added to your website root!', 'success');
+  else toast('Deploy failed: ' + r.error, 'error');
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
 // SETTINGS
 // ═════════════════════════════════════════════════════════════════════════════
 var _setupBanner = false;
 function showSetupBanner () { _setupBanner = true; }
 
 async function renderSettings () {
-  // Use the already-loaded S.config — no extra IPC call needed here.
-  // S.config was refreshed by navigate() just before calling this function.
   const cfg     = S.config;
-  const wwwRoot = await _api.fs.wwwroot();
+  const [wwwRoot, userList] = await Promise.all([
+    _api.fs.wwwroot(),
+    _api.users.list(),
+  ]);
 
   document.getElementById('content').innerHTML = `
   ${_setupBanner ? `<div class="setup-banner mb-2">
@@ -1253,6 +1665,46 @@ async function renderSettings () {
     </div>
   </div>
 
+  <!-- User Accounts -->
+  <div class="settings-section">
+    <h3>User Accounts</h3>
+    <p class="form-hint" style="margin-bottom:.9rem">
+      Add multiple users so different people can log in with their own credentials.
+      When users are configured the login page shows a username field.
+      If no users are added, the single password above is used instead.
+    </p>
+    ${userList.length ? `
+    <table style="width:100%;border-collapse:collapse;font-size:.86rem;margin-bottom:.75rem">
+      <thead><tr>
+        <th style="text-align:left;padding:.35rem .5rem;color:var(--text2);font-size:.72rem;
+                   text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)">Username</th>
+        <th style="text-align:center;padding:.35rem .5rem;color:var(--text2);font-size:.72rem;
+                   text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)">Enabled</th>
+        <th style="border-bottom:1px solid var(--border)"></th>
+      </tr></thead>
+      <tbody>
+        ${userList.map(function (u) { return `
+        <tr>
+          <td style="padding:.45rem .5rem">${esc(u.username)}</td>
+          <td style="padding:.45rem .5rem;text-align:center">
+            <label class="switch" style="display:inline-block">
+              <input type="checkbox" onchange="toggleUser('${esc(u.id)}',this.checked)"
+                     ${u.enabled ? 'checked' : ''}>
+              <span class="slider"></span>
+            </label>
+          </td>
+          <td style="padding:.45rem .5rem">
+            <div class="flex gap-1">
+              <button class="btn btn-sm" onclick="changeUserPw('${esc(u.id)}','${esc(u.username)}')">🔑 Change PW</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteUser('${esc(u.id)}','${esc(u.username)}')">🗑</button>
+            </div>
+          </td>
+        </tr>`; }).join('')}
+      </tbody>
+    </table>` : `<p class="text-muted text-small" style="margin-bottom:.75rem">No users configured — using the single password above.</p>`}
+    <button class="btn" onclick="promptAddUser()">+ Add User</button>
+  </div>
+
   <!-- Web server -->
   <div class="settings-section">
     <h3>Web Server</h3>
@@ -1294,6 +1746,41 @@ async function renderSettings () {
     </div>
   </div>
 
+  <!-- Scheduling -->
+  <div class="settings-section">
+    <h3>Scheduling</h3>
+    <div class="toggle-row">
+      <div class="tr-info">
+        <h4>Auto Start / Stop</h4>
+        <p>Automatically start the server at a set time and stop it later</p>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="s-sched" ${cfg.scheduleEnabled ? 'checked' : ''}>
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div id="sched-options" class="${cfg.scheduleEnabled ? '' : 'hidden'}">
+      <hr class="divider">
+      <div class="flex gap-2" style="flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Start Time</label>
+          <input class="form-control" type="time" id="s-sched-start"
+                 value="${esc(cfg.scheduleStart || '08:00')}" style="max-width:160px">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Stop Time</label>
+          <input class="form-control" type="time" id="s-sched-stop"
+                 value="${esc(cfg.scheduleStop || '23:00')}" style="max-width:160px">
+        </div>
+      </div>
+      <p class="form-hint mt-1">
+        The server will start at <strong id="sched-start-preview">${esc(cfg.scheduleStart || '08:00')}</strong>
+        and stop at <strong id="sched-stop-preview">${esc(cfg.scheduleStop || '23:00')}</strong> every day.
+        Overnight windows (e.g. 22:00 → 06:00) are supported.
+      </p>
+    </div>
+  </div>
+
   <!-- Website files -->
   <div class="settings-section">
     <h3>Website Files</h3>
@@ -1328,6 +1815,24 @@ async function renderSettings () {
     document.getElementById('ftp-options').classList.toggle('hidden', !this.checked);
   };
 
+  // Show / hide schedule time fields
+  document.getElementById('s-sched').onchange = function () {
+    document.getElementById('sched-options').classList.toggle('hidden', !this.checked);
+  };
+  // Live-preview the start/stop times in the hint text
+  function updateSchedPreview () {
+    var s = document.getElementById('s-sched-start');
+    var e = document.getElementById('s-sched-stop');
+    var ps = document.getElementById('sched-start-preview');
+    var pe = document.getElementById('sched-stop-preview');
+    if (s && ps) ps.textContent = s.value;
+    if (e && pe) pe.textContent = e.value;
+  }
+  var ss = document.getElementById('s-sched-start');
+  var se = document.getElementById('s-sched-stop');
+  if (ss) ss.addEventListener('input', updateSchedPreview);
+  if (se) se.addEventListener('input', updateSchedPreview);
+
   // Show / hide password text
   document.getElementById('pw-toggle').onclick = function () {
     var inp  = document.getElementById('s-pw');
@@ -1353,6 +1858,9 @@ async function renderSettings () {
       enableFTP:                 document.getElementById('s-ftp').checked,
       ftpPort:                   parseInt(document.getElementById('s-ftpport').value, 10) || 2121,
       ftpUsername:              (document.getElementById('s-ftpuser').value.trim()  || 'myownplace'),
+      scheduleEnabled:           document.getElementById('s-sched').checked,
+      scheduleStart:            (document.getElementById('s-sched-start').value || '08:00'),
+      scheduleStop:             (document.getElementById('s-sched-stop').value  || '23:00'),
       wwwRoot:                   document.getElementById('s-wwwroot').value.trim(),
       setupComplete:             true,
     };
@@ -1453,6 +1961,32 @@ window.openWwwFolder = async function () {
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
+// THEME TOGGLE
+// ═════════════════════════════════════════════════════════════════════════════
+
+function applyTheme (theme) {
+  // 'light' adds the class; 'dark' (default) removes it
+  document.body.classList.toggle('light', theme === 'light');
+  var btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀';
+  btn && (btn.title = theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+}
+
+window.toggleTheme = function () {
+  var current = document.body.classList.contains('light') ? 'light' : 'dark';
+  var next    = current === 'light' ? 'dark' : 'light';
+  try { localStorage.setItem('mop-theme', next); } catch (_) {}
+  applyTheme(next);
+};
+
+// Apply saved theme immediately (before init() so there's no flash)
+(function () {
+  var saved = 'dark';
+  try { saved = localStorage.getItem('mop-theme') || 'dark'; } catch (_) {}
+  applyTheme(saved);
+}());
+
+// ═════════════════════════════════════════════════════════════════════════════
 // DOM SETUP + BOOT
 // The <script> tag is at the bottom of <body> so the DOM is fully available
 // here.  We set up all synchronous event listeners first, then call init().
@@ -1483,6 +2017,20 @@ var _mb = byId('modal-backdrop'); if (_mb) _mb.onclick = function (e) {
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') closeModal();
 });
+
+// ── Scheduled auto-start / auto-stop notifications ────────────────────────────
+if (window.api && window.api.server.onAutoStart) {
+  window.api.server.onAutoStart(function () {
+    refreshIndicator(true);
+    if (S.page === 'dashboard') renderDashboard();
+    else toast('Server started automatically (scheduled)', 'info');
+  });
+  window.api.server.onAutoStop(function () {
+    refreshIndicator(false);
+    if (S.page === 'dashboard') renderDashboard();
+    else toast('Server stopped automatically (scheduled)', 'info');
+  });
+}
 
 // ── Auto-update notifications ─────────────────────────────────────────────────
 if (window.api && window.api.updater) {

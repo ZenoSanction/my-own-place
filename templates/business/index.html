@@ -1083,6 +1083,12 @@
 
 <body>
 
+<!-- ↩ Back / Forward navigation -->
+<div style="position:fixed;top:10px;left:10px;z-index:10000;display:flex;gap:6px;">
+  <button onclick="history.back()" title="Back" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#e2e8f0'" style="width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.92);border:1px solid #e2e8f0;color:#0f172a;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 1px 4px rgba(0,0,0,.1);">←</button>
+  <button onclick="history.forward()" title="Forward" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#e2e8f0'" style="width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.92);border:1px solid #e2e8f0;color:#0f172a;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 1px 4px rgba(0,0,0,.1);">→</button>
+</div>
+
   <!-- ================================================
        NAVIGATION
   ================================================ -->

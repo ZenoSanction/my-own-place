@@ -105,6 +105,12 @@
 </head>
 <body>
 
+<!-- ↩ Back / Forward navigation -->
+<div style="position:fixed;top:10px;left:10px;z-index:10000;display:flex;gap:6px;">
+  <button onclick="history.back()" title="Back" onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#30363d'" style="width:34px;height:34px;border-radius:8px;background:rgba(22,27,34,.92);border:1px solid #30363d;color:#c9d1d9;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">←</button>
+  <button onclick="history.forward()" title="Forward" onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#30363d'" style="width:34px;height:34px;border-radius:8px;background:rgba(22,27,34,.92);border:1px solid #30363d;color:#c9d1d9;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">→</button>
+</div>
+
 <!-- Hero -->
 <section class="hero">
   <div class="avatar">😎</div>
@@ -146,34 +152,38 @@
   <div class="links-grid">
     <!-- ✏️ Replace each href with your real URL, then save. -->
     <!-- Example Steam profile: https://steamcommunity.com/id/yourname/ -->
-    <a class="link-card" href="https://store.steampowered.com/" target="_blank">
+    <a class="link-card" href="https://store.steampowered.com/">
       <span class="link-icon">🎮</span>
       <div><h4>Steam</h4><p>Check my game library</p></div>
     </a>
     <!-- Example Discord invite: https://discord.gg/abc123 -->
-    <a class="link-card" href="https://discord.com/" target="_blank">
+    <a class="link-card" href="https://discord.com/">
       <span class="link-icon">💬</span>
       <div><h4>Discord</h4><p>Chat with me</p></div>
     </a>
     <!-- /gallery.html serves your gallery page — create it or remove this card -->
-    <a class="link-card" href="/gallery.html" target="_blank">
+    <a class="link-card" href="/gallery.html">
       <span class="link-icon">📸</span>
       <div><h4>Photos</h4><p>My photo gallery</p></div>
     </a>
     <!-- /files serves the files/ folder in your website root -->
-    <a class="link-card" href="/files" target="_blank">
+    <a class="link-card" href="/files">
       <span class="link-icon">📦</span>
       <div><h4>Files</h4><p>Shared downloads</p></div>
     </a>
     <!-- Example YouTube channel: https://youtube.com/@yourchannel -->
-    <a class="link-card" href="https://youtube.com/" target="_blank">
+    <a class="link-card" href="https://youtube.com/">
       <span class="link-icon">📺</span>
       <div><h4>YouTube</h4><p>My favourite videos</p></div>
     </a>
     <!-- Example Twitter/X: https://x.com/yourhandle -->
-    <a class="link-card" href="https://x.com/" target="_blank">
+    <a class="link-card" href="https://x.com/">
       <span class="link-icon">🐦</span>
       <div><h4>Twitter / X</h4><p>Follow me</p></div>
+    </a>
+    <a class="link-card" href="/guestbook.html">
+      <span class="link-icon">📖</span>
+      <div><h4>Guestbook</h4><p>Leave a message</p></div>
     </a>
   </div>
 </section>

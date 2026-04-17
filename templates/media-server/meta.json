@@ -1,0 +1,6 @@
+{
+  "name": "Media Server",
+  "description": "Stream videos, music, and photos directly from your server with a built-in player",
+  "emoji": "🎬",
+  "tags": ["media", "video", "music", "gallery", "streaming"]
+}
