@@ -277,7 +277,6 @@ async function renderDashboard () {
           <input class="share-url" id="web-url" value="${lanUrl}" readonly>
           <button class="btn btn-sm" onclick="copyText('${lanUrl}')">Copy</button>
           <button class="btn btn-sm btn-primary" onclick="openBrowser('${lanUrl}')">Open</button>
-          <button class="btn btn-sm" onclick="showQR('${lanUrl}')">🔲 QR</button>
         </div>` : ''}
       </div>
     </div>
@@ -418,6 +417,8 @@ async function renderDashboard () {
                captures whatever value is in the field at click time, not render time. -->
           <button class="btn btn-sm" id="pub-url-copy"
                   onclick="copyText(document.getElementById('pub-url-input').value)">Copy</button>
+          <button class="btn btn-sm" id="pub-url-qr"
+                  onclick="showQR(document.getElementById('pub-url-input').value)">🔲 QR</button>
         </div>
         <p style="font-size:.75rem;color:${S.publicIp ? '#3fb950' : '#f0883e'};margin-top:.4rem" id="pub-ip-note">
           ${S.publicIp
