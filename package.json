@@ -49,6 +49,9 @@
       "icon": "assets/icon.ico",
       "requestedExecutionLevel": "asInvoker"
     },
+    "portable": {
+      "artifactName": "${productName} Portable ${version}.${ext}"
+    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
