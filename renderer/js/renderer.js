@@ -50,7 +50,7 @@ function timed (promise, label, ms) {
       reject(new Error(
         '"' + label + '" did not respond within ' + (ms / 1000) + 's.\n\n' +
         'The app engine (main process) is not responding.\n' +
-        'Try closing all windows and relaunching via dev.bat.'
+        'Try closing all windows and relaunching via Start.bat.'
       ));
     }, ms);
     promise.then(
@@ -132,7 +132,7 @@ async function init () {
     showCrash(new Error(
       'The IPC bridge (window.api) is not available.\n\n' +
       'This usually means the preload script failed to load.\n' +
-      'Make sure you launched via dev.bat or start.vbs — ' +
+      'Make sure you launched via Start.bat or start.vbs — ' +
       'do not open index.html directly in a browser.\n\n' +
       'Check %TEMP%\\myownplace-debug.log for details.'
     ));

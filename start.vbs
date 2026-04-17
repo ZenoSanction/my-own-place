@@ -1,6 +1,6 @@
 ' My Own Place - Silent Launcher
 ' Double-click this to open the app with no CMD window.
-' Requires dev.bat to have been run at least once (to install node_modules).
+' Requires Start.bat to have been run at least once (to install node_modules).
 
 Dim oShell, sDir, sExe
 Set oShell = CreateObject("WScript.Shell")

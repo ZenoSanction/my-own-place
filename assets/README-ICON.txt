@@ -9,4 +9,4 @@ Steps to create it from the SVG:
 3. Save the result as:  assets/icon.ico
 
 Without icon.ico the app still runs fine — it just uses the default Electron icon.
-The dev.bat script works without it. Only the installer build requires it.
+The Start.bat script works without it. Only the installer build requires it.
